@@ -261,20 +261,13 @@ private:
       }
 
       // ========================================================================
-      // FIX PROBLEM 3: REMOVE HARDCODED ETHERCAT INTERFACE (Portability)
+      // ETHERCAT INTERFACE VALIDATION (Portability & Safety)
       // ========================================================================
-      // OLD: Hardcoded "enp89s0" as fallback - not portable across systems
-      // NEW: Auto-detect EtherCAT interface or fail with diagnostic message
-      //
-      // Rationale: Interface names vary by system (enp*, eth*, eno*, etc.)
-      // Better to fail early with clear error than run with wrong interface
+      // Interface name is required and must be explicitly configured.
+      // Rationale: Interface names vary by system (enp*, eth*, eno*).
+      // Fail early with clear error rather than risk misconfiguration.
       
       if (interface_name_.empty()) {
-         // Attempt auto-detection of EtherCAT-capable interface
-         std::vector<std::string> candidate_interfaces = {
-            "eth0", "eth1", "enp89s0", "eno1", "enx*", "enp*"
-         };
-         
          RCLCPP_ERROR(this->get_logger(),
             "EtherCAT interface parameter 'ethercat_interface' is REQUIRED but not set!");
          RCLCPP_ERROR(this->get_logger(),
