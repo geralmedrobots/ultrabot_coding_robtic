@@ -85,15 +85,15 @@ private:
 TeleopJoy::TeleopJoy()
   : Node("teleop_joy"),
     linear_(1),
-    angular_(3),
+    angular_(2),  // Standard: axis 2 for angular (yaw) control
     throttle_axis_(5),
     deadman_button_(5),
     require_deadman_(true),
     max_linear_cmd_(1.0),
     max_angular_cmd_(1.0),
     watchdog_timeout_(0.5),
-    l_scale_(0.0),
-    a_scale_(0.0),
+    l_scale_(1.0),  // Default scale of 1.0 (no scaling)
+    a_scale_(1.0),  // Default scale of 1.0 (no scaling)
     r2_vel(0.0),
     watchdog_triggered_(false),
     command_count_(0),
@@ -130,14 +130,14 @@ TeleopJoy::TeleopJoy()
     throw std::runtime_error("Invalid parameters");
   }
 
-  // Create publishers
-  vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel", 10);
-  deadman_pub_ = this->create_publisher<std_msgs::msg::Bool>("/deadman_status", 10);
-  log_pub_ = this->create_publisher<std_msgs::msg::String>("/operator_log", 10);
+  // Create publishers (relative to node namespace for multi-robot support)
+  vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
+  deadman_pub_ = this->create_publisher<std_msgs::msg::Bool>("deadman_status", 10);
+  log_pub_ = this->create_publisher<std_msgs::msg::String>("operator_log", 10);
 
-  // Create subscriber
+  // Create subscriber (relative to node namespace)
   joy_sub_ = this->create_subscription<sensor_msgs::msg::Joy>(
-    "/joy", 10,
+    "joy", 10,
     std::bind(&TeleopJoy::joyCallback, this, std::placeholders::_1));
 
   // Create watchdog timer
@@ -312,13 +312,12 @@ int main(int argc, char** argv)
   try {
     auto teleop_joy = std::make_shared<TeleopJoy>();
     rclcpp::spin(teleop_joy);
+    rclcpp::shutdown();
+    return 0;
   } catch (const std::exception& e) {
     RCLCPP_FATAL(rclcpp::get_logger("teleop_joy"), 
       "Fatal error: %s", e.what());
     rclcpp::shutdown();
     return 1;
   }
-  
-  rclcpp::shutdown();
-  return 0;
 }
