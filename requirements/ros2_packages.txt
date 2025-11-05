@@ -1,0 +1,182 @@
+# Ultrabot ROS 2 Package Dependencies
+# Ubuntu 22.04 LTS | ROS 2 Humble Hawksbill
+#
+# Installation:
+#   sudo apt update
+#   xargs -a requirements/ros2_packages.txt sudo apt install -y
+#
+# Version-specific installation:
+#   # v0.2 only:  grep -E "^(ros|clang|cppcheck)" requirements/ros2_packages.txt | grep -v "# v0.3" | xargs sudo apt install -y
+#   # v0.3 only:  grep "# v0.3" requirements/ros2_packages.txt | awk '{print $1}' | xargs sudo apt install -y
+
+# ============================================================================
+# v0.2: FOUNDATION FRAMEWORKS (Navigation, SLAM, Safety, QA)
+# ============================================================================
+
+# -----------------------------------------------------------------------------
+# 🧭 Navigation Stack (Nav2)
+# Purpose: Autonomous path planning and control for hospital environments
+# Standard: ISO 3691-4 (AGV safety requirements)
+# -----------------------------------------------------------------------------
+ros-humble-nav2-bringup              # Complete Nav2 launch files and configuration
+ros-humble-nav2-core                 # Core Nav2 interfaces and base classes
+ros-humble-nav2-util                 # Common utilities for Nav2 components
+ros-humble-nav2-bt-navigator         # Behavior tree-based navigation
+ros-humble-nav2-controller           # Controller server (DWB, TEB, MPPI)
+ros-humble-nav2-planner              # Planner server (NavFn, Smac, Theta*)
+ros-humble-nav2-lifecycle-manager    # Lifecycle node management
+ros-humble-nav2-costmap-2d           # Costmap generation and management
+ros-humble-nav2-behaviors            # Recovery behaviors (spin, backup)
+ros-humble-nav2-waypoint-follower    # Waypoint-based navigation
+
+# -----------------------------------------------------------------------------
+# 🗺️ Mapping & Localization
+# Purpose: 2D SLAM and map-based localization
+# Standard: Indoor mobile robots (ISO 3691-4 §5.6)
+# -----------------------------------------------------------------------------
+ros-humble-slam-toolbox              # 2D SLAM with loop closure and serialization
+ros-humble-amcl                      # Adaptive Monte Carlo Localization
+ros-humble-nav2-map-server           # Map loading and serving
+
+# -----------------------------------------------------------------------------
+# 🛡️ Safety & Diagnostics
+# Purpose: System health monitoring for CE/FDA compliance
+# Standard: ISO 13849-1 (Safety diagnostics), ISO 14971 (Risk management)
+# -----------------------------------------------------------------------------
+ros-humble-diagnostic-updater        # Standardized diagnostics interface
+ros-humble-diagnostic-aggregator     # Aggregate diagnostics from multiple sources
+ros-humble-diagnostic-msgs           # Diagnostic message definitions
+ros-humble-diagnostic-common-diagnostics  # Common diagnostic publishers
+ros-humble-rqt-robot-monitor         # GUI for diagnostics visualization
+
+# -----------------------------------------------------------------------------
+# 📜 Code Quality & Documentation Tools (Continuous)
+# Purpose: Maintain code quality and consistency
+# Standard: ROS 2 code style, MISRA C++ (partial)
+# -----------------------------------------------------------------------------
+clang-format-14                      # C++ code formatting (Google style)
+cppcheck                             # Static analysis for C/C++ bugs
+ros-humble-ament-lint                # ROS 2 linting framework
+ros-humble-ament-lint-common         # Common linting tools
+ros-humble-ament-cmake-clang-format  # CMake integration for clang-format
+ros-humble-ament-cmake-cppcheck      # CMake integration for cppcheck
+ros-humble-ament-cmake-cpplint       # CMake integration for cpplint
+ros-humble-ament-cmake-flake8        # CMake integration for flake8 (Python)
+ros-humble-ament-cmake-pep257        # CMake integration for pep257 (Python docstrings)
+ros-humble-ament-cmake-xmllint       # CMake integration for XML validation
+
+# ============================================================================
+# v0.3: ADVANCED FRAMEWORKS (Fleet, Fusion, Simulation, Security)
+# ============================================================================
+
+# -----------------------------------------------------------------------------
+# 🤝 Fleet Management (RMF - Open Robotics Multi-Robot Framework)
+# Purpose: Multi-robot coordination for hospital-wide operations
+# Standard: Hospital logistics (elevator, door integration)
+# -----------------------------------------------------------------------------
+ros-humble-rmf-core                  # v0.3 - RMF core interfaces and messages
+ros-humble-rmf-fleet-adapter         # v0.3 - Fleet adapter for robot integration
+ros-humble-rmf-task                  # v0.3 - Task management and scheduling
+ros-humble-rmf-traffic               # v0.3 - Traffic coordination and conflict resolution
+ros-humble-rmf-visualization         # v0.3 - Visualization tools for RMF
+ros-humble-rmf-building-map-msgs     # v0.3 - Building map message definitions
+
+# -----------------------------------------------------------------------------
+# 📈 Sensor Fusion & Filtering
+# Purpose: Fuse IMU + odometry for robust localization
+# Standard: ISO 8855 (Vehicle dynamics), sensor fusion best practices
+# -----------------------------------------------------------------------------
+ros-humble-robot-localization        # v0.3 - EKF/UKF sensor fusion (IMU + odometry)
+
+# -----------------------------------------------------------------------------
+# 🧰 Simulation Environment
+# Purpose: Virtual testing and validation
+# Standard: Software validation (IEC 62304), regression testing
+# -----------------------------------------------------------------------------
+gazebo                               # v0.3 - Gazebo 11 physics simulator
+ros-humble-gazebo-ros                # v0.3 - ROS 2 Gazebo integration
+ros-humble-gazebo-ros-pkgs           # v0.3 - Gazebo ROS 2 packages
+ros-humble-gazebo-plugins            # v0.3 - Additional Gazebo plugins
+ros-humble-robot-state-publisher     # v0.3 - Publish robot state from URDF
+ros-humble-joint-state-publisher     # v0.3 - Publish joint states
+ros-humble-xacro                     # v0.3 - XML macros for URDF/SDF
+
+# -----------------------------------------------------------------------------
+# 🔐 Cybersecurity (IEC 62443 Compliance)
+# Purpose: Secure DDS communication and node authentication
+# Standard: IEC 62443-3-3, IEC 62443-4-2, FDA Cybersecurity Guidance (2023)
+# -----------------------------------------------------------------------------
+ros-humble-sros2                     # v0.3 - ROS 2 security (keystore, encryption)
+ros-humble-fastrtps                  # v0.3 - Fast DDS middleware with security
+ros-humble-rmw-fastrtps-cpp          # v0.3 - RMW implementation for Fast DDS
+openssl                              # v0.3 - OpenSSL for cryptographic operations
+libssl-dev                           # v0.3 - OpenSSL development libraries
+
+# ============================================================================
+# SUPPORTING LIBRARIES (All Versions)
+# ============================================================================
+
+# -----------------------------------------------------------------------------
+# ROS 2 Core Dependencies (typically auto-installed with ROS 2 Desktop)
+# -----------------------------------------------------------------------------
+ros-humble-rclcpp                    # C++ client library
+ros-humble-rclpy                     # Python client library
+ros-humble-std-msgs                  # Standard ROS message types
+ros-humble-geometry-msgs             # Geometry-related messages
+ros-humble-nav-msgs                  # Navigation-related messages
+ros-humble-sensor-msgs               # Sensor data messages
+ros-humble-tf2                       # Transform library v2
+ros-humble-tf2-ros                   # ROS bindings for tf2
+ros-humble-tf2-geometry-msgs         # Geometry message support for tf2
+
+# -----------------------------------------------------------------------------
+# Visualization Tools
+# -----------------------------------------------------------------------------
+ros-humble-rviz2                     # 3D visualization tool
+ros-humble-rqt                       # Qt-based GUI framework
+ros-humble-rqt-common-plugins        # Common rqt plugins
+
+# -----------------------------------------------------------------------------
+# Build Tools (typically installed with ros-dev-tools)
+# -----------------------------------------------------------------------------
+# python3-colcon-common-extensions   # Colcon build tool
+# python3-rosdep                     # Dependency management
+# python3-vcstool                    # Version control tools
+
+# ============================================================================
+# NOTES
+# ============================================================================
+
+# Version Constraints:
+#   All packages: Compatible with ROS 2 Humble on Ubuntu 22.04 LTS
+#   Nav2: Version 1.1.x
+#   SLAM Toolbox: Version 2.6.x
+#   RMF: Version 21.09+
+#   Gazebo: Version 11.x
+
+# Installation Order:
+#   1. ROS 2 Humble Desktop (base installation)
+#   2. v0.2 packages (navigation, SLAM, diagnostics, QA)
+#   3. v0.3 packages (fleet, fusion, simulation, security)
+
+# Optional Packages (not listed):
+#   - ros-humble-nav2-simple-commander (Python Nav2 API)
+#   - ros-humble-rmf-demos (RMF learning examples)
+#   - ros-humble-gazebo-dev (Gazebo plugin development)
+#   - ros-humble-perception-pcl (Point Cloud Library, for 3D sensors)
+
+# Security Note:
+#   SROS2 requires additional setup beyond package installation.
+#   See: Navigation/SROS2_GUIDE.md for complete configuration.
+
+# Compliance Mapping:
+#   ISO 13849-1 (Safety): diagnostic-updater, diagnostic-aggregator
+#   ISO 3691-4 (AGV): nav2-*, slam-toolbox, amcl
+#   IEC 62443 (Cybersecurity): sros2, fastrtps
+#   IEC 62304 (Medical software): All QA tools, simulation (validation)
+#   ISO 14971 (Risk management): diagnostic-* (monitoring)
+
+# Maintenance:
+#   This file is updated with each minor version release.
+#   Last updated: 2025-11-05
+#   Next review: Quarterly or upon ROS 2 Humble patch release
