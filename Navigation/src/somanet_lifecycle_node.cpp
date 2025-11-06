@@ -1,25 +1,18 @@
 #include "somanet_lifecycle_node.hpp"
 
 #include <algorithm>
-#include <cmath>
 #include <functional>
 #include <memory>
 #include <stdexcept>
 #include <utility>
 
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <lifecycle_msgs/msg/state.hpp>
 
 using namespace std::chrono_literals;
 
 namespace
 {
-constexpr double kVarPositionBase = 0.001;   // ≈ (3 cm)^2
-constexpr double kVarYawBase = 0.03;         // ≈ (10°)^2 in rad
-constexpr double kVarUnused = 1'000'000.0;   // Unused covariance entries
-constexpr int kMaxCommandMrpm = 20000;       // Matches EtherCAT safety limit
-constexpr double kPi = 3.14159265358979323846;
+constexpr int kMaxCommandMrpm = CommandLimiter::kMaxCommandMrpm;
 }  // namespace
 
 SomanetLifecycleNode::SomanetLifecycleNode(
@@ -31,6 +24,9 @@ SomanetLifecycleNode::SomanetLifecycleNode(
   if (!drive_) {
     throw std::invalid_argument("DriveInterface instance must not be null");
   }
+
+  command_watchdog_ = std::make_unique<CommandWatchdog>(this->get_clock());
+  odom_publisher_ = std::make_unique<OdometryPublisher>(*this);
 }
 
 void SomanetLifecycleNode::declareAndFetchParameters()
@@ -138,19 +134,42 @@ SomanetLifecycleNode::CallbackReturn SomanetLifecycleNode::on_configure(
   }
 
   try {
-    odometry_ = std::make_unique<OdometryCalculator>(
-      distance_wheels_, wheel_diameter_, left_wheel_polarity_, right_wheel_polarity_);
+    command_limiter_.setParameters(
+      distance_wheels_,
+      wheel_diameter_,
+      max_linear_vel_,
+      max_angular_vel_,
+      left_wheel_polarity_,
+      right_wheel_polarity_);
+
+    if (command_watchdog_) {
+      command_watchdog_->setTimeout(cmd_watchdog_timeout_);
+      command_watchdog_->recordCommand(0, 0);
+    }
+
+    if (!odom_publisher_) {
+      odom_publisher_ = std::make_unique<OdometryPublisher>(*this);
+    }
+
+    OdometryPublisher::Config odom_config;
+    odom_config.distance_wheels = distance_wheels_;
+    odom_config.wheel_diameter = wheel_diameter_;
+    odom_config.left_wheel_polarity = left_wheel_polarity_;
+    odom_config.right_wheel_polarity = right_wheel_polarity_;
+    odom_config.delta_t_warn_threshold = delta_t_warn_threshold_;
+    odom_config.odom_frame_id = odom_frame_id_;
+    odom_config.child_frame_id = child_frame_id_;
+    odom_config.publish_tf = publish_tf_;
+    odom_publisher_->configure(odom_config);
   } catch (const std::exception & e) {
-    RCLCPP_FATAL(get_logger(), "Failed to construct OdometryCalculator: %s", e.what());
+    RCLCPP_FATAL(get_logger(), "Failed to configure driver helpers: %s", e.what());
     return CallbackReturn::FAILURE;
   }
 
-  odom_pub_ = this->create_publisher<nav_msgs::msg::Odometry>("odom", rclcpp::QoS(50));
   fault_pub_ = this->create_publisher<std_msgs::msg::String>("safety/fault_events", rclcpp::QoS(10));
   cmd_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
     "wheel_cmd_safe", rclcpp::QoS(10),
     std::bind(&SomanetLifecycleNode::cmdVelCallback, this, std::placeholders::_1));
-  tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(shared_from_this());
 
   auto self_shared = std::static_pointer_cast<SomanetLifecycleNode>(shared_from_this());
   std::weak_ptr<SomanetLifecycleNode> weak_this(self_shared);
@@ -160,12 +179,8 @@ SomanetLifecycleNode::CallbackReturn SomanetLifecycleNode::on_configure(
     }
   });
 
-  prev_time_sec_ = this->now().seconds();
-  last_cmd_time_sec_.store(prev_time_sec_);
   commanded_left_mrpm_.store(0);
   commanded_right_mrpm_.store(0);
-  feedback_left_mrpm_.store(0);
-  feedback_right_mrpm_.store(0);
   fault_active_.store(false);
 
   RCLCPP_INFO(get_logger(),
@@ -181,15 +196,16 @@ SomanetLifecycleNode::CallbackReturn SomanetLifecycleNode::on_activate(
   (void)state;
   RCLCPP_INFO(get_logger(), "Activating Somanet EtherCAT driver");
 
-  if (odom_pub_) {
-    odom_pub_->on_activate();
+  if (odom_publisher_) {
+    odom_publisher_->activate();
   }
   if (fault_pub_) {
     fault_pub_->on_activate();
   }
 
-  prev_time_sec_ = this->now().seconds();
-  last_cmd_time_sec_.store(prev_time_sec_);
+  if (command_watchdog_) {
+    command_watchdog_->recordCommand(0, 0);
+  }
 
   if (!drive_->initialize(interface_name_)) {
     publishFault("Drive failed to initialize");
@@ -214,8 +230,8 @@ SomanetLifecycleNode::CallbackReturn SomanetLifecycleNode::on_deactivate(
 
   drive_->shutdown();
 
-  if (odom_pub_ && odom_pub_->is_activated()) {
-    odom_pub_->on_deactivate();
+  if (odom_publisher_) {
+    odom_publisher_->deactivate();
   }
   if (fault_pub_ && fault_pub_->is_activated()) {
     fault_pub_->on_deactivate();
@@ -238,16 +254,18 @@ SomanetLifecycleNode::CallbackReturn SomanetLifecycleNode::on_cleanup(
   drive_->shutdown();
 
   cmd_sub_.reset();
-  odom_pub_.reset();
   fault_pub_.reset();
-  tf_broadcaster_.reset();
-  odometry_.reset();
+  if (odom_publisher_) {
+    odom_publisher_->cleanup();
+  }
 
   commanded_left_mrpm_.store(0);
   commanded_right_mrpm_.store(0);
-  feedback_left_mrpm_.store(0);
-  feedback_right_mrpm_.store(0);
   fault_active_.store(false);
+
+  if (command_watchdog_) {
+    command_watchdog_->recordCommand(0, 0);
+  }
 
   return CallbackReturn::SUCCESS;
 }
@@ -280,27 +298,16 @@ void SomanetLifecycleNode::cmdVelCallback(const geometry_msgs::msg::Twist::Share
     return;
   }
 
-  auto clamp = [](double value, double min_value, double max_value) {
-    return std::max(std::min(value, max_value), min_value);
-  };
+  const auto wheel_speeds = command_limiter_.computeWheelSpeeds(*msg);
 
-  double linear = clamp(msg->linear.x, -max_linear_vel_, max_linear_vel_);
-  double angular = clamp(msg->angular.z, -max_angular_vel_, max_angular_vel_);
+  commanded_left_mrpm_.store(wheel_speeds.first);
+  commanded_right_mrpm_.store(wheel_speeds.second);
 
-  double left_ms = linear - (distance_wheels_ * angular / 2.0);
-  double right_ms = linear + (distance_wheels_ * angular / 2.0);
+  if (command_watchdog_) {
+    command_watchdog_->recordCommand(wheel_speeds.first, wheel_speeds.second);
+  }
 
-  int left_mrpm = metersPerSecondToMrpm(left_ms, left_wheel_polarity_);
-  int right_mrpm = metersPerSecondToMrpm(right_ms, right_wheel_polarity_);
-
-  left_mrpm = std::max(std::min(left_mrpm, kMaxCommandMrpm), -kMaxCommandMrpm);
-  right_mrpm = std::max(std::min(right_mrpm, kMaxCommandMrpm), -kMaxCommandMrpm);
-
-  commanded_left_mrpm_.store(left_mrpm);
-  commanded_right_mrpm_.store(right_mrpm);
-  last_cmd_time_sec_.store(this->now().seconds());
-
-  if (!drive_->setVelocity(left_mrpm, right_mrpm)) {
+  if (!drive_->setVelocity(wheel_speeds.first, wheel_speeds.second)) {
     publishFault("Drive rejected velocity command");
   } else if (fault_active_.load()) {
     publishRecovery("Velocity commands accepted");
@@ -309,19 +316,17 @@ void SomanetLifecycleNode::cmdVelCallback(const geometry_msgs::msg::Twist::Share
 
 void SomanetLifecycleNode::handleDriveFeedback(int left_mrpm, int right_mrpm)
 {
-  feedback_left_mrpm_.store(left_mrpm);
-  feedback_right_mrpm_.store(right_mrpm);
-  updateOdometry(left_mrpm, right_mrpm);
+  if (odom_publisher_) {
+    odom_publisher_->updateFromFeedback(left_mrpm, right_mrpm);
+  }
 }
 
 void SomanetLifecycleNode::watchdogTick()
 {
-  const double now_sec = this->now().seconds();
-  const double last_cmd_sec = last_cmd_time_sec_.load();
-
-  if ((now_sec - last_cmd_sec) > cmd_watchdog_timeout_) {
+  if (command_watchdog_ && command_watchdog_->timedOut()) {
     if (commanded_left_mrpm_.exchange(0) != 0 || commanded_right_mrpm_.exchange(0) != 0) {
       drive_->setVelocity(0, 0);
+      command_watchdog_->recordCommand(0, 0);
     }
   }
 
@@ -451,17 +456,4 @@ void SomanetLifecycleNode::publishRecovery(const std::string & context)
   std_msgs::msg::String msg;
   msg.data = context.empty() ? "RECOVERED" : "RECOVERED: " + context;
   fault_pub_->publish(msg);
-}
-
-int SomanetLifecycleNode::metersPerSecondToMrpm(double meters_per_second, int wheel_polarity) const
-{
-  double circumference = kPi * wheel_diameter_;
-  if (circumference <= 0.0) {
-    return 0;
-  }
-
-  double rpm = (meters_per_second / circumference) * 60.0;
-  double mrpm = rpm * 1000.0;
-  int result = static_cast<int>(std::lround(mrpm));
-  return result * wheel_polarity;
 }

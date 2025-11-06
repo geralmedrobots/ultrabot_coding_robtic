@@ -3,18 +3,17 @@
 
 #include <atomic>
 #include <memory>
-#include <mutex>
 #include <string>
 
 #include <geometry_msgs/msg/twist.hpp>
-#include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_lifecycle/lifecycle_node.hpp>
 #include <std_msgs/msg/string.hpp>
-#include <tf2_ros/transform_broadcaster.h>
 
 #include "drive_interface.hpp"
-#include "odometry_calculator.hpp"
+#include "command_limiter.hpp"
+#include "command_watchdog.hpp"
+#include "odometry_publisher.hpp"
 
 /**
  * @brief Lifecycle-managed SOMANET driver node
@@ -51,20 +50,18 @@ private:
   void watchdogTick();
 
   // Internal helpers
-  void updateOdometry(int left_mrpm, int right_mrpm);
   void publishFault(const std::string & reason);
   void publishRecovery(const std::string & context = {});
-  int metersPerSecondToMrpm(double meters_per_second, int wheel_polarity) const;
 
   // Dependencies
   std::shared_ptr<DriveInterface> drive_;
-  std::unique_ptr<OdometryCalculator> odometry_;
+  CommandLimiter command_limiter_;
+  std::unique_ptr<CommandWatchdog> command_watchdog_;
+  std::unique_ptr<OdometryPublisher> odom_publisher_;
 
   // ROS entities
-  rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
   rclcpp_lifecycle::LifecyclePublisher<std_msgs::msg::String>::SharedPtr fault_pub_;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_sub_;
-  std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
   rclcpp::TimerBase::SharedPtr watchdog_timer_;
 
   // Parameters
@@ -84,13 +81,7 @@ private:
   // State
   std::atomic<int> commanded_left_mrpm_{0};
   std::atomic<int> commanded_right_mrpm_{0};
-  std::atomic<int> feedback_left_mrpm_{0};
-  std::atomic<int> feedback_right_mrpm_{0};
-  std::atomic<double> last_cmd_time_sec_{0.0};
   std::atomic<bool> fault_active_{false};
-  double prev_time_sec_{0.0};
-
-  std::mutex odom_mutex_;
 };
 
 #endif  // SOMANET_LIFECYCLE_NODE_HPP

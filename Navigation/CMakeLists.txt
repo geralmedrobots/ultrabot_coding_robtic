@@ -101,16 +101,18 @@ ament_target_dependencies(odometry_calculator_lib
 )
 
 # Build lifecycle driver library
-add_library(somanet_driver_node
+add_library(somanet_driver_lib
+  src/command_limiter.cpp
+  src/command_watchdog.cpp
+  src/odometry_publisher.cpp
   src/somanet_lifecycle_node.cpp
 )
 
-target_link_libraries(somanet_driver_node
+target_link_libraries(somanet_driver_lib
   odometry_calculator_lib
-  ethercat_driver_lib
 )
 
-ament_target_dependencies(somanet_driver_node
+ament_target_dependencies(somanet_driver_lib
   rclcpp
   rclcpp_lifecycle
   std_msgs
@@ -124,7 +126,8 @@ ament_target_dependencies(somanet_driver_node
 # Build main executable
 add_executable(main src/main.cpp)
 target_link_libraries(main
-  somanet_driver_node
+  somanet_driver_lib
+  ethercat_driver_lib
 )
 
 # Build teleop_joy executable
@@ -262,7 +265,7 @@ if(BUILD_TESTING)
     ${CMAKE_CURRENT_SOURCE_DIR}/include
   )
   target_link_libraries(test_somanet_lifecycle_node
-    somanet_driver_node
+    somanet_driver_lib
   )
   ament_target_dependencies(test_somanet_lifecycle_node
     rclcpp
@@ -285,15 +288,19 @@ if(BUILD_TESTING)
     odometry_calculator_lib
   )
   
-  # Integration test: EtherCAT Failure Detection
-  ament_add_gtest(test_ethercat_failures 
-    test/test_ethercat_failures.cpp
+  # Unit tests for command limiting and watchdog behaviour
+  ament_add_gtest(test_drive_safety_utils
+    test/test_drive_safety_utils.cpp
   )
-  target_include_directories(test_ethercat_failures PUBLIC
+  target_include_directories(test_drive_safety_utils PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
   )
-  ament_target_dependencies(test_ethercat_failures
+  target_link_libraries(test_drive_safety_utils
+    somanet_driver_lib
+  )
+  ament_target_dependencies(test_drive_safety_utils
     rclcpp
+    geometry_msgs
   )
 
   # Integration test: Lifecycle Node Bring-up
@@ -320,7 +327,7 @@ if(BUILD_TESTING)
     test_mock_driver
     test_somanet_lifecycle_node
     test_safety_critical
-    test_ethercat_failures
+    test_drive_safety_utils
     DESTINATION lib/${PROJECT_NAME}
   )
 endif()

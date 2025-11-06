@@ -185,7 +185,7 @@ export ROS_SECURITY_STRATEGY=Enforce
 - Unit tests for odometry, driver, safety logic
 - Integration test for lifecycle orchestration
 - Mock drivers for testing without hardware
-- Coverage tracking (95%+)
+- Coverage tracking (targeting ≥95%)
 
 **Test Suite:**
 ```bash
@@ -197,7 +197,7 @@ colcon test-result --verbose
 - `test_odometry_calculator.cpp`: Kinematics accuracy
 - `test_mock_driver.cpp`: Driver interface
 - `test_safety_critical.cpp`: Safety functions
-- `test_ethercat_failures.cpp`: Fault handling
+  - `test_drive_safety_utils.cpp`: Command limiting & watchdog safety
 - `test_lifecycle_integration.cpp`: Startup orchestration
 
 **Files:**

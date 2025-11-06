@@ -16,7 +16,8 @@ ROS2 package for safe AGV control with EtherCAT motor interface, redundant safet
 - ✅ **Command Arbitration:** Priority-based command source selection (ISO 3691-4 compliant)
 - ✅ **Safe Teleoperation:** Deadman button + watchdog timers
 - ✅ **Real-time Diagnostics:** System health monitoring at 1Hz
-- ✅ **Unit Tested:** 21 tests, 95% coverage
+- ✅ **Modular Lifecycle:** Dedicated command limiter, watchdog, and odometry publisher components
+- ✅ **Unit Tested:** 6 automated suites covering lifecycle, watchdog, and maintenance flows
 
 ---
 
