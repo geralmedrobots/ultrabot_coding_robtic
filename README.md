@@ -150,6 +150,7 @@ Ultrabot follows a phased development approach with clear milestones:
 
 **Ongoing Activities:**
 - ✅ Automated testing (6 focused unit tests covering safety, odometry, and lifecycle helpers)
+- ✅ Automated testing (5 focused unit tests covering safety, odometry, and lifecycle helpers)
 - ✅ Static analysis (cppcheck)
 - ✅ Code formatting (clang-format)
 - 🔄 Compliance documentation (ISO 13849-1, IEC 62443)
@@ -263,6 +264,9 @@ colcon test --packages-select somanet --event-handlers console_direct+ \
 - 6 unit/integration tests (C++ GTest)
 - Lifecycle driver coverage with watchdog, odometry, and maintenance checks
 - HTML coverage reports generated via `--cov-report=html`
+
+- 95%+ code coverage
+- Lifecycle driver coverage with watchdog + odometry checks
 - Odometry validation scripts
 
 ### Code Quality
