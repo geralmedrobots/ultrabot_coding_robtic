@@ -337,6 +337,90 @@ void SomanetLifecycleNode::watchdogTick()
   }
 }
 
+void SomanetLifecycleNode::updateOdometry(int left_mrpm, int right_mrpm)
+{
+  std::lock_guard<std::mutex> lock(odom_mutex_);
+  if (!odometry_) {
+    return;
+  }
+
+  const double now_sec = this->now().seconds();
+  double delta_t = now_sec - prev_time_sec_;
+  if (delta_t <= 0.0) {
+    prev_time_sec_ = now_sec;
+    return;
+  }
+
+  if (delta_t > delta_t_warn_threshold_) {
+    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000,
+      "Large odometry delta_t %.3f s", delta_t);
+  }
+
+  prev_time_sec_ = now_sec;
+
+  if (!odometry_->update(left_mrpm, right_mrpm, delta_t)) {
+    return;
+  }
+
+  double x, y, yaw;
+  odometry_->getPose(x, y, yaw);
+
+  double linear_vel, angular_vel;
+  odometry_->getTwist(linear_vel, angular_vel);
+
+  double var_position, var_yaw;
+  odometry_->getCovariance(var_position, var_yaw);
+
+  nav_msgs::msg::Odometry odom;
+  odom.header.stamp = this->now();
+  odom.header.frame_id = odom_frame_id_;
+  odom.child_frame_id = child_frame_id_;
+
+  odom.pose.pose.position.x = x;
+  odom.pose.pose.position.y = y;
+  odom.pose.pose.position.z = 0.0;
+
+  tf2::Quaternion q;
+  q.setRPY(0.0, 0.0, yaw);
+  odom.pose.pose.orientation = tf2::toMsg(q);
+
+  odom.pose.covariance[0] = var_position;
+  odom.pose.covariance[7] = var_position;
+  odom.pose.covariance[14] = kVarUnused;
+  odom.pose.covariance[21] = kVarUnused;
+  odom.pose.covariance[28] = kVarUnused;
+  odom.pose.covariance[35] = var_yaw;
+
+  odom.twist.twist.linear.x = linear_vel;
+  odom.twist.twist.linear.y = 0.0;
+  odom.twist.twist.linear.z = 0.0;
+  odom.twist.twist.angular.x = 0.0;
+  odom.twist.twist.angular.y = 0.0;
+  odom.twist.twist.angular.z = angular_vel;
+
+  odom.twist.covariance[0] = kVarPositionBase;
+  odom.twist.covariance[7] = kVarPositionBase;
+  odom.twist.covariance[14] = kVarUnused;
+  odom.twist.covariance[21] = kVarUnused;
+  odom.twist.covariance[28] = kVarUnused;
+  odom.twist.covariance[35] = kVarYawBase;
+
+  if (odom_pub_ && odom_pub_->is_activated()) {
+    odom_pub_->publish(odom);
+  }
+
+  if (publish_tf_ && tf_broadcaster_) {
+    geometry_msgs::msg::TransformStamped tf_msg;
+    tf_msg.header = odom.header;
+    tf_msg.child_frame_id = odom.child_frame_id;
+    tf_msg.transform.translation.x = odom.pose.pose.position.x;
+    tf_msg.transform.translation.y = odom.pose.pose.position.y;
+    tf_msg.transform.translation.z = 0.0;
+    tf_msg.transform.rotation = odom.pose.pose.orientation;
+    tf_broadcaster_->sendTransform(tf_msg);
+  }
+}
+
 void SomanetLifecycleNode::publishFault(const std::string & reason)
 {
   if (!fault_pub_ || !fault_pub_->is_activated()) {
