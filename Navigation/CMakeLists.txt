@@ -14,6 +14,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(ament_index_cpp REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
@@ -99,24 +100,19 @@ ament_target_dependencies(odometry_calculator_lib
   tf2
 )
 
-# Build main executable (legacy monolithic version)
-set(SOURCES_LEGACY src/main.cpp)
-add_library(LibsModule ${SOURCES_LEGACY})
+# Build lifecycle driver library
+add_library(somanet_driver_node
+  src/somanet_lifecycle_node.cpp
+)
 
-# Link libraries properly
-if(SOEM_LIBRARY)
-  target_link_libraries(LibsModule
-    ${SOEM_LIBRARY}
-    pthread
-  )
-else()
-  target_link_libraries(LibsModule
-    pthread
-  )
-endif()
+target_link_libraries(somanet_driver_node
+  odometry_calculator_lib
+  ethercat_driver_lib
+)
 
-ament_target_dependencies(LibsModule
+ament_target_dependencies(somanet_driver_node
   rclcpp
+  rclcpp_lifecycle
   std_msgs
   geometry_msgs
   nav_msgs
@@ -125,11 +121,10 @@ ament_target_dependencies(LibsModule
   tf2_geometry_msgs
 )
 
-add_executable(main ${SOURCES_LEGACY})
-target_link_libraries(main 
-  LibsModule 
-  odometry_calculator_lib
-  ethercat_driver_lib
+# Build main executable
+add_executable(main src/main.cpp)
+target_link_libraries(main
+  somanet_driver_node
 )
 
 # Build teleop_joy executable
@@ -258,9 +253,26 @@ if(BUILD_TESTING)
   ament_target_dependencies(test_mock_driver
     rclcpp
   )
-  
+
+  # Unit test: Lifecycle node behavior with mock driver
+  ament_add_gtest(test_somanet_lifecycle_node
+    test/test_somanet_lifecycle_node.cpp
+  )
+  target_include_directories(test_somanet_lifecycle_node PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+  )
+  target_link_libraries(test_somanet_lifecycle_node
+    somanet_driver_node
+  )
+  ament_target_dependencies(test_somanet_lifecycle_node
+    rclcpp
+    rclcpp_lifecycle
+    geometry_msgs
+    nav_msgs
+  )
+
   # Integration test: Safety-Critical Behavior (ISO 13849-1)
-  ament_add_gtest(test_safety_critical 
+  ament_add_gtest(test_safety_critical
     test/test_safety_critical.cpp
   )
   ament_target_dependencies(test_safety_critical
@@ -306,6 +318,7 @@ if(BUILD_TESTING)
   install(TARGETS
     test_odometry_calculator
     test_mock_driver
+    test_somanet_lifecycle_node
     test_safety_critical
     test_ethercat_failures
     DESTINATION lib/${PROJECT_NAME}
