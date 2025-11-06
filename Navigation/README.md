@@ -16,7 +16,8 @@ ROS2 package for safe AGV control with EtherCAT motor interface, redundant safet
 - ✅ **Command Arbitration:** Priority-based command source selection (ISO 3691-4 compliant)
 - ✅ **Safe Teleoperation:** Deadman button + watchdog timers
 - ✅ **Real-time Diagnostics:** System health monitoring at 1Hz
-- ✅ **Unit Tested:** 21 tests, 95% coverage
+- ✅ **Modular Lifecycle:** Dedicated command limiter, watchdog, and odometry publisher components
+- ✅ **Unit Tested:** 6 automated suites covering lifecycle, watchdog, and maintenance flows
 
 ---
 
@@ -194,7 +195,8 @@ Teleop → /cmd_vel → [Safety Supervisor] → /wheel_cmd_safe → [Drive Node]
 | Component | Description | Lines | Status |
 |-----------|-------------|-------|--------|
 | `safety_supervisor_node.cpp` | Redundant command validation | 521 | ✅ Production |
-| `main.cpp` | EtherCAT drive control + odometry | 668 | ✅ Production |
+| `somanet_lifecycle_node.cpp` | Lifecycle orchestration, odometry, watchdogs | 447 | ✅ Production |
+| `main.cpp` | Lifecycle entrypoint & CLI | 93 | ✅ Production |
 | `command_arbitrator_node.cpp` | Priority-based command selection | 380 | ✅ Production |
 | `odometry_calculator.cpp` | Differential drive kinematics | 120 | ✅ Production |
 | `teleop_joy.cpp` | Safe joystick teleoperation | 324 | ✅ Production |

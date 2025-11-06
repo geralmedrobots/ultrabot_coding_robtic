@@ -14,8 +14,16 @@
  */
 class MockDriver : public DriveInterface {
 public:
-    MockDriver() : operational_(false), left_vel_(0), right_vel_(0), 
-                   cycle_count_(0), emergency_stopped_(false) {}
+    MockDriver()
+    : operational_(false),
+      emergency_stopped_(false),
+      left_vel_(0),
+      right_vel_(0),
+      cycle_count_(0),
+      last_command_left_(0),
+      last_command_right_(0),
+      set_velocity_calls_(0)
+    {}
 
     bool initialize(const std::string& interface_name) override {
         std::cout << "[MockDriver] Initializing (simulation mode)" << std::endl;
@@ -27,6 +35,10 @@ public:
         if (!operational_ || emergency_stopped_) {
             return false;
         }
+
+        last_command_left_ = left_mrpm;
+        last_command_right_ = right_mrpm;
+        ++set_velocity_calls_;
 
         // Simulate acceleration limits (20% change per cycle)
         int delta_left = static_cast<int>((left_mrpm - left_vel_) * 0.2);
@@ -40,6 +52,14 @@ public:
 
     std::pair<int, int> getVelocity() const override {
         return {left_vel_, right_vel_};
+    }
+
+    std::pair<int, int> getLastCommandRequest() const {
+        return {last_command_left_, last_command_right_};
+    }
+
+    int getSetVelocityCallCount() const {
+        return set_velocity_calls_;
     }
 
     bool isOperational() const override {
@@ -85,6 +105,9 @@ public:
         emergency_stopped_ = false;
         left_vel_ = 0;
         right_vel_ = 0;
+        last_command_left_ = 0;
+        last_command_right_ = 0;
+        set_velocity_calls_ = 0;
     }
 
 private:
@@ -93,5 +116,8 @@ private:
     int left_vel_;
     int right_vel_;
     uint64_t cycle_count_;
+    int last_command_left_;
+    int last_command_right_;
+    int set_velocity_calls_;
     std::function<void(int, int)> callback_;
 };
