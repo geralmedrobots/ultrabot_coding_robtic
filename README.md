@@ -98,6 +98,7 @@ ultrabot_coding_robtic/
 │   ├── FRAMEWORKS.md        # ROS 2 frameworks catalog
 │   ├── ROADMAP.md           # Development roadmap (v0.2, v0.3)
 │   ├── INSTALLATION_FRAMEWORKS.md  # Installation guide
+│   ├── OPERATIONAL_READINESS.md    # Snapshot of deployment/testing gaps
 │   └── FRAMEWORKS_QUICK_REFERENCE.md  # Quick reference cheat sheet
 ├── requirements/            # Dependency lists
 │   └── ros2_packages.txt    # ROS 2 package dependencies
@@ -148,6 +149,7 @@ Ultrabot follows a phased development approach with clear milestones:
 **Status:** Active | **Priority:** HIGH
 
 **Ongoing Activities:**
+- ✅ Automated testing (6 focused unit tests covering safety, odometry, and lifecycle helpers)
 - ✅ Automated testing (5 focused unit tests covering safety, odometry, and lifecycle helpers)
 - ✅ Static analysis (cppcheck)
 - ✅ Code formatting (clang-format)
