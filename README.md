@@ -254,9 +254,8 @@ colcon test --packages-select somanet --event-handlers console_direct+ \
 ```
 
 **Test Coverage:**
-- 5 unit tests (C++ GTest)
 - 95%+ code coverage
-- 6 safety-critical function tests
+- Lifecycle driver coverage with watchdog + odometry checks
 - Odometry validation scripts
 
 ### Code Quality
