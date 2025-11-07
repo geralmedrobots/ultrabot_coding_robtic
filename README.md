@@ -206,6 +206,7 @@ Ultrabot leverages industry-standard ROS 2 frameworks organized by functionality
 ### Planning & Architecture
 - **[Development Roadmap](docs/ROADMAP.md)** - Version milestones, timelines, and dependencies
 - **[Framework Catalog](docs/FRAMEWORKS.md)** - Complete ROS 2 frameworks reference
+- **[Remaining Work Checklist](docs/REMAINING_TASKS.md)** - Actionable tasks required for full production readiness
 
 ### Safety & Compliance
 - **[Safety Manual](Navigation/SAFETY.md)** - ⚠️ **Mandatory reading before operation**
