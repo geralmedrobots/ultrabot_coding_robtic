@@ -99,6 +99,7 @@ ultrabot_coding_robtic/
 │   ├── ROADMAP.md           # Development roadmap (v0.2, v0.3)
 │   ├── INSTALLATION_FRAMEWORKS.md  # Installation guide
 │   ├── OPERATIONAL_READINESS.md    # Snapshot of deployment/testing gaps
+│   ├── OPEN_SOURCE_RESOURCES.md    # Curated upstream repositories to accelerate integration
 │   └── FRAMEWORKS_QUICK_REFERENCE.md  # Quick reference cheat sheet
 ├── requirements/            # Dependency lists
 │   └── ros2_packages.txt    # ROS 2 package dependencies
@@ -150,7 +151,6 @@ Ultrabot follows a phased development approach with clear milestones:
 
 **Ongoing Activities:**
 - ✅ Automated testing (6 focused unit tests covering safety, odometry, and lifecycle helpers)
-- ✅ Automated testing (5 focused unit tests covering safety, odometry, and lifecycle helpers)
 - ✅ Static analysis (cppcheck)
 - ✅ Code formatting (clang-format)
 - 🔄 Compliance documentation (ISO 13849-1, IEC 62443)
@@ -159,6 +159,14 @@ Ultrabot follows a phased development approach with clear milestones:
 ---
 
 **For complete roadmap with timelines and dependencies, see:** [docs/ROADMAP.md](docs/ROADMAP.md)
+
+---
+
+## 🔗 Open-Source Ecosystem
+
+Ultrabot builds upon a vibrant ROS 2 ecosystem. Explore the curated list of
+upstream repositories that underpin navigation, safety, diagnostics, and
+simulation efforts in [docs/OPEN_SOURCE_RESOURCES.md](docs/OPEN_SOURCE_RESOURCES.md).
 
 ---
 
@@ -264,9 +272,6 @@ colcon test --packages-select somanet --event-handlers console_direct+ \
 - 6 unit/integration tests (C++ GTest)
 - Lifecycle driver coverage with watchdog, odometry, and maintenance checks
 - HTML coverage reports generated via `--cov-report=html`
-
-- 95%+ code coverage
-- Lifecycle driver coverage with watchdog + odometry checks
 - Odometry validation scripts
 
 ### Code Quality
