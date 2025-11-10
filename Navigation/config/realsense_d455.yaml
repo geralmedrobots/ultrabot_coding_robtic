@@ -1,0 +1,37 @@
+# RealSense D455 configuration derived from the open-source intel-ros/realsense-ros package.
+# Update serial_no if multiple cameras are connected. Values align with the default launch
+# shipped by https://github.com/IntelRealSense/realsense-ros (Apache-2.0).
+realsense2_camera:
+  ros__parameters:
+    serial_no: ""
+    device_type: "d455"
+    align_depth.enable: true
+    enable_sync: true
+    enable_color: true
+    enable_depth: true
+    enable_infra1: false
+    enable_infra2: false
+    enable_gyro: true
+    enable_accel: true
+    enable_pointcloud: true
+    unite_imu_method: "copy"
+    color_height: 720
+    color_width: 1280
+    color_fps: 30.0
+    depth_height: 720
+    depth_width: 1280
+    depth_fps: 30.0
+    publish_tf: true
+    tf_publish_rate: 0.0  # publish only when transforms change
+    pointcloud_texture_stream: "RS2_STREAM_COLOR"
+    pointcloud_texture_index: 0
+    filters: "pointcloud"
+    clip_distance: 6.0
+    linear_accel_cov: 0.01
+    angular_velocity_cov: 0.01
+    base_frame_id: "realsense_base_link"
+    depth_frame_id: "realsense_depth_frame"
+    color_frame_id: "realsense_color_frame"
+    imu_frame_id: "realsense_imu_frame"
+    publish_odom_tf: false
+    topic_odom_in: "/realsense/odom/sample"

@@ -2,7 +2,7 @@
 
 **Autonomous Guided Vehicle for Medical and Hospital Environments**
 
-**Version:** 0.2 | **ROS Distribution:** Humble | **Platform:** Ubuntu 22.04 LTS
+**Version:** 0.2 | **ROS Distribution:** Humble / Jazzy | **Platforms:** Ubuntu 22.04 LTS (Jammy) / 24.04 LTS (Noble)
 
 ---
 
@@ -26,35 +26,40 @@ Ultrabot is a safety-critical AGV platform designed for autonomous navigation in
 
 ### Prerequisites
 
-- **OS:** Ubuntu 22.04 LTS (Jammy Jellyfish)
-- **ROS:** ROS 2 Humble Hawksbill
+- **OS:** Ubuntu 22.04 LTS (Jammy Jellyfish) **or** Ubuntu 24.04 LTS (Noble Numbat)
+- **ROS:** ROS 2 Humble Hawksbill **or** ROS 2 Jazzy Jalisco (installed via the helper script below)
 - **Hardware:** Minimum 8GB RAM, 4-core CPU
 - **Network:** WiFi 5/6 or Gigabit Ethernet
 
 ### Installation
 
 ```bash
-# 1. Install ROS 2 Humble (if not already installed)
-sudo apt update
-sudo apt install ros-humble-desktop ros-dev-tools -y
-
-# 2. Clone repository
+# 1. Clone repository
 mkdir -p ~/ultrabot_ws/src
 cd ~/ultrabot_ws/src
 git clone https://github.com/geralmedrobots/ultrabot_coding_robtic.git
 
-# 3. Install dependencies
+# 2. Install ROS 2 + system dependencies (Jammy → Humble, Noble → Jazzy)
 cd ultrabot_coding_robtic
-xargs -a requirements/ros2_packages.txt sudo apt install -y
+xargs -a requirements/ros2_packages.txt sudo apt install -y    # Jammy
+# or, run the guided installer for automatic repo setup (supports Jammy + Noble)
+sudo ./Navigation/scripts/install_dependencies.sh
+
+# 3. Source the ROS distribution installed by the script
+source /opt/ros/${ROS_DISTRO:-humble}/setup.bash
 
 # 4. Build workspace
 cd ~/ultrabot_ws
-source /opt/ros/humble/setup.bash
 colcon build --symlink-install
 
 # 5. Source workspace
 source install/setup.bash
 ```
+
+> **Note:** The helper script performs `apt-get update` and fetches the ROS 2 GPG keys.
+> If you are behind a proxy/firewall that blocks outbound HTTP(S), the script exits early
+> and records logs in `/tmp/somanet_apt.<pid>.log` so you can remediate network access
+> before retrying.
 
 **For detailed installation instructions, see:** [docs/INSTALLATION_FRAMEWORKS.md](docs/INSTALLATION_FRAMEWORKS.md)
 
@@ -93,6 +98,8 @@ ultrabot_coding_robtic/
 │   ├── FRAMEWORKS.md        # ROS 2 frameworks catalog
 │   ├── ROADMAP.md           # Development roadmap (v0.2, v0.3)
 │   ├── INSTALLATION_FRAMEWORKS.md  # Installation guide
+│   ├── OPERATIONAL_READINESS.md    # Snapshot of deployment/testing gaps
+│   ├── OPEN_SOURCE_RESOURCES.md    # Curated upstream repositories to accelerate integration
 │   └── FRAMEWORKS_QUICK_REFERENCE.md  # Quick reference cheat sheet
 ├── requirements/            # Dependency lists
 │   └── ros2_packages.txt    # ROS 2 package dependencies
@@ -143,7 +150,7 @@ Ultrabot follows a phased development approach with clear milestones:
 **Status:** Active | **Priority:** HIGH
 
 **Ongoing Activities:**
-- ✅ Automated testing (21 unit tests, 95% coverage)
+- ✅ Automated testing (6 focused unit tests covering safety, odometry, and lifecycle helpers)
 - ✅ Static analysis (cppcheck)
 - ✅ Code formatting (clang-format)
 - 🔄 Compliance documentation (ISO 13849-1, IEC 62443)
@@ -152,6 +159,15 @@ Ultrabot follows a phased development approach with clear milestones:
 ---
 
 **For complete roadmap with timelines and dependencies, see:** [docs/ROADMAP.md](docs/ROADMAP.md)
+
+---
+
+## 🔗 Open-Source Ecosystem
+
+Ultrabot builds upon a vibrant ROS 2 ecosystem. Explore the curated list of
+upstream repositories that underpin navigation, safety, diagnostics,
+simulation, perception, operator tooling, and CI hardening efforts in
+[docs/OPEN_SOURCE_RESOURCES.md](docs/OPEN_SOURCE_RESOURCES.md).
 
 ---
 
@@ -191,6 +207,7 @@ Ultrabot leverages industry-standard ROS 2 frameworks organized by functionality
 ### Planning & Architecture
 - **[Development Roadmap](docs/ROADMAP.md)** - Version milestones, timelines, and dependencies
 - **[Framework Catalog](docs/FRAMEWORKS.md)** - Complete ROS 2 frameworks reference
+- **[Remaining Work Checklist](docs/REMAINING_TASKS.md)** - Actionable tasks required for full production readiness
 
 ### Safety & Compliance
 - **[Safety Manual](Navigation/SAFETY.md)** - ⚠️ **Mandatory reading before operation**
@@ -254,9 +271,9 @@ colcon test --packages-select somanet --event-handlers console_direct+ \
 ```
 
 **Test Coverage:**
-- 21 unit tests (C++ GTest)
-- 95%+ code coverage
-- 6 safety-critical function tests
+- 6 unit/integration tests (C++ GTest)
+- Lifecycle driver coverage with watchdog, odometry, and maintenance checks
+- HTML coverage reports generated via `--cov-report=html`
 - Odometry validation scripts
 
 ### Code Quality
@@ -389,6 +406,8 @@ See [LICENSE](LICENSE) file for details.
 ### Hardware References
 - [Somanet EtherCAT Drives](https://www.synapticon.com/)
 - [SICK LiDAR Sensors](https://www.sick.com/)
+- [Intel RealSense D455 Depth Camera](https://www.intelrealsense.com/depth-camera-d455/)
+- [Ouster OS-Series 3D LiDAR](https://ouster.com/products/os-series)
 
 ---
 
