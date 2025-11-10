@@ -8,7 +8,10 @@
 
 ### v0.2: Foundation
 ```bash
-sudo apt install -y ros-humble-nav2-bringup ros-humble-nav2-core ros-humble-nav2-util ros-humble-slam-toolbox ros-humble-amcl ros-humble-diagnostic-updater ros-humble-diagnostic-aggregator clang-format-14 cppcheck ros-humble-ament-lint ros-humble-ament-lint-common
+sudo apt install -y ros-humble-nav2-bringup ros-humble-nav2-core ros-humble-nav2-util \
+  ros-humble-slam-toolbox ros-humble-amcl ros-humble-diagnostic-updater \
+  ros-humble-diagnostic-aggregator ros-humble-realsense2-camera ros-humble-ros2-ouster \
+  clang-format-14 cppcheck ros-humble-ament-lint ros-humble-ament-lint-common
 ```
 
 ### v0.3: Advanced
@@ -25,6 +28,8 @@ sudo apt install -y ros-humble-rmf-core ros-humble-rmf-fleet-adapter ros-humble-
 | Nav2 | Navigation | v0.2 | Path planning, obstacle avoidance | `ros-humble-nav2-bringup` |
 | SLAM Toolbox | Mapping | v0.2 | 2D SLAM with loop closure | `ros-humble-slam-toolbox` |
 | AMCL | Localization | v0.2 | Monte Carlo localization | `ros-humble-amcl` |
+| RealSense D455 | Perception | v0.2 | RGB-D sensing | `ros-humble-realsense2-camera` |
+| Ouster OS LiDAR | Perception | v0.2 | 3D point clouds | `ros-humble-ros2-ouster` |
 | Diagnostics | Safety | v0.2 | System health monitoring | `ros-humble-diagnostic-updater` |
 | RMF | Fleet | v0.3 | Multi-robot coordination | `ros-humble-rmf-core` |
 | robot_localization | Fusion | v0.3 | IMU + odometry fusion | `ros-humble-robot-localization` |

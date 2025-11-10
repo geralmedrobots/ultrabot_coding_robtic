@@ -15,6 +15,9 @@ work or verification before the robot can be considered production-ready.
 - **Maintenance and safety flows:** The safety supervisor and maintenance mode
   manager enforce PIN authentication, audit logging, and safety topic gating
   as documented in the `Navigation/SECURITY_SUMMARY.md` guidance.
+- **Perception bring-up launch:** `sensors.launch.py` coordinates Intel RealSense D455
+  and Ouster OS-series drivers via upstream open-source packages, supplying RViz
+  overlays for bench validation.
 
 ## Outstanding Requirements
 
@@ -29,6 +32,9 @@ work or verification before the robot can be considered production-ready.
 - **Security hardening:** Default credentials and security keystores should be
   replaced with production secrets before deployment. The documented SROS2 setup
   must be executed on the target robot to guarantee encrypted communication.
+- **Sensor calibration and data fusion:** RealSense intrinsics/extrinsics and
+  Ouster metadata must be captured for each robot, with verification runs that
+  feed point clouds and RGB-D data into Nav2 costmaps and localization filters.
 
 ## Local Test Execution Log
 

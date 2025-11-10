@@ -58,6 +58,7 @@ Establish core autonomous navigation and safety infrastructure for single-robot 
 - Existing: EtherCAT motor control (somanet package)
 - Existing: Differential drive kinematics
 - Required: Laser scanner integration (e.g., SICK TiM561)
+- Available: RealSense D455 + Ouster OS launch (`sensors.launch.py`) pending calibration
 
 **Estimated Effort:** 3-4 weeks
 
@@ -83,6 +84,7 @@ Establish core autonomous navigation and safety infrastructure for single-robot 
 - Required: Lidar data at 20Hz minimum
 - Required: Stable odometry (already implemented)
 - Required: Static transform tree (base_link → laser_frame)
+- Available: RGB-D + point-cloud data streams once calibration tasks in `docs/REMAINING_TASKS.md` are completed
 
 **Estimated Effort:** 2-3 weeks
 

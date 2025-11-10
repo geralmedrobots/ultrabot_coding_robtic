@@ -46,6 +46,14 @@ ros-humble-amcl                      # Adaptive Monte Carlo Localization
 ros-humble-nav2-map-server           # Map loading and serving
 
 # -----------------------------------------------------------------------------
+# 👁️ Perception Sensors (Depth + 3D LiDAR)
+# Purpose: High-fidelity environment understanding for navigation and obstacle avoidance
+# Standard: Supports ISO 3691-4 sensing requirements; aligns with hospital object detection needs
+# -----------------------------------------------------------------------------
+ros-humble-realsense2-camera         # Intel RealSense D455 depth & RGB driver (intel-ros/realsense-ros)
+ros-humble-ros2-ouster               # Ouster OS series LiDAR driver (ros-drivers/ros2_ouster)
+
+# -----------------------------------------------------------------------------
 # 🛡️ Safety & Diagnostics
 # Purpose: System health monitoring for CE/FDA compliance
 # Standard: ISO 13849-1 (Safety diagnostics), ISO 14971 (Risk management)

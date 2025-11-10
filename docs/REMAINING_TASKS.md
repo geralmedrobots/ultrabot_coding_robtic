@@ -22,6 +22,15 @@ contributors can quickly identify the next actionable tasks.
 - [ ] Fuse wheel odometry with IMU data through `robot_localization` to improve pose estimates in
       long corridors and elevators.
 
+## Perception & Sensor Integration
+
+- [ ] Capture Intel RealSense D455 intrinsics/extrinsics per robot and store the calibration in
+      `config/realsense_d455.yaml` overrides.
+- [ ] Export Ouster metadata for each LiDAR (`os_config.json`) and validate point-cloud fidelity
+      against hospital corridors, updating `config/ouster_lidar.yaml` as required.
+- [ ] Wire depth and point-cloud topics into Nav2 costmaps and obstacle layers, documenting the
+      configuration in the navigation bring-up guide.
+
 ## Diagnostics and Observability
 
 - [ ] Wire ROS 2 diagnostics (`diagnostic_updater`, `system_metrics_collector`) to publish CPU,

@@ -45,6 +45,7 @@ the AGV platform, and notes the current integration status.
 
 | Repository | Description | Value for Ultrabot | Integration Notes |
 |------------|-------------|--------------------|-------------------|
+| [IntelRealSense/realsense-ros](https://github.com/IntelRealSense/realsense-ros) | ROS 2 drivers for Intel RealSense depth cameras. | Supplies RGB-D data for obstacle avoidance, docking alignment, and semantic perception. | Included via `realsense2_camera`; configure D455 serial and frame conventions in `config/realsense_d455.yaml`. |
 | [ros-drivers/ros2_ouster](https://github.com/ros-drivers/ros2_ouster) | Drivers and ROS 2 nodes for Ouster LiDAR sensors. | Provides high-resolution point clouds for corridor obstacle detection and SLAM refinement. | Optional for hardware rev that includes a roof-mounted LiDAR; align sensor launch files with Nav2 costmaps. |
 | [ros-drivers/velodyne](https://github.com/ros-drivers/velodyne) | ROS drivers and point cloud utilities for Velodyne LiDARs. | Supplies alternative LiDAR support if procurement shifts vendors. | Evaluate once LiDAR hardware is finalized; the `velodyne_driver` and `velodyne_pointcloud` packages are Humble/Jazzy ready. |
 | [ros-drivers/usb_cam](https://github.com/ros-drivers/usb_cam) | Simple ROS 2 camera driver for USB cameras. | Enables quick prototyping of vision-based patient/asset detection before bespoke perception stacks are added. | Useful for simulation or pilot deployments; migrate to industrial cameras as needed. |

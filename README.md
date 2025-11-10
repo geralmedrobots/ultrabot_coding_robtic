@@ -406,6 +406,8 @@ See [LICENSE](LICENSE) file for details.
 ### Hardware References
 - [Somanet EtherCAT Drives](https://www.synapticon.com/)
 - [SICK LiDAR Sensors](https://www.sick.com/)
+- [Intel RealSense D455 Depth Camera](https://www.intelrealsense.com/depth-camera-d455/)
+- [Ouster OS-Series 3D LiDAR](https://ouster.com/products/os-series)
 
 ---
 

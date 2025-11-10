@@ -10,6 +10,7 @@
 - [Framework Categories](#framework-categories)
   - [🧭 Navigation (v0.2)](#-navigation-v02)
   - [🗺️ Mapping/Localization (v0.2)](#️-mappinglocalization-v02)
+  - [👁️ Perception (v0.2)](#-perception-v02)
   - [🛡️ Safety/Diagnostics (v0.2)](#️-safetydiagnostics-v02)
   - [🤝 Fleet Management (v0.3)](#-fleet-management-v03)
   - [📈 Sensor Fusion/Filters (v0.3)](#-sensor-fusionfilters-v03)
@@ -103,6 +104,42 @@ sudo apt-get install -y \
 - Real-time localization during operation
 - Map updates for dynamic environments
 - Multi-floor navigation
+
+---
+
+### 👁️ Perception (v0.2)
+
+RGB-D and 3D LiDAR sensing for obstacle detection, docking alignment, and SLAM inputs.
+
+| Package | Purpose | Installation |
+|---------|---------|--------------|
+| `ros-humble-realsense2-camera` | Intel RealSense depth + RGB driver | See below |
+| `ros-humble-ros2-ouster` | Ouster OS-series LiDAR driver | See below |
+
+**Purpose:** Provides dense depth, RGB imagery, and 3D point clouds required for safe navigation in cluttered hospital corridors
+and elevators.
+
+**Installation:**
+```bash
+sudo apt-get update
+sudo apt-get install -y \
+  ros-humble-realsense2-camera \
+  ros-humble-ros2-ouster
+```
+
+**Official Documentation:**
+- [Intel RealSense ROS 2](https://github.com/IntelRealSense/realsense-ros)
+- [Ouster ROS 2 Driver](https://github.com/ros-drivers/ros2_ouster)
+
+**Use Cases:**
+- Depth-assisted docking at charging stations
+- 3D obstacle detection and SLAM map refinement
+- Telepresence and situational awareness for operators
+- Semantic perception prototypes using RGB-D data
+
+**Prerequisites:**
+- Calibration captured per robot for both sensors (see `docs/REMAINING_TASKS.md`)
+- Time synchronization between sensors and the main controller for accurate fusion
 
 ---
 
