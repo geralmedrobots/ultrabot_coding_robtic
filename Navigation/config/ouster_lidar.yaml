@@ -1,0 +1,30 @@
+# Ouster OS series configuration based on the BSD-licensed ros-drivers/ros2_ouster package.
+# Adjust sensor_hostname and metadata path for the deployed unit.
+os_sensor:
+  ros__parameters:
+    sensor_hostname: "os-1.local"
+    udp_dest: "auto"
+    udp_profile_lidar: "PROFILE_LIDAR_LEGACY"
+    udp_profile_imu: "PROFILE_IMU_LEGACY"
+    lidar_mode: "1024x10"
+    timestamp_mode: "TIME_FROM_INTERNAL_OSC"
+    use_system_default_qos: false
+    mtp: 9000
+    metadata: "/tmp/ouster_metadata.json"
+    force_sensor_timestamp: false
+
+os_cloud:
+  ros__parameters:
+    sensor_hostname: "os-1.local"
+    metadata: "/tmp/ouster_metadata.json"
+    sensor_frame: "ouster_sensor"
+    lidar_frame: "ouster_lidar"
+    imu_frame: "ouster_imu"
+    pointcloud_frame: "ouster_pointcloud"
+    imu_topic: "/ouster/imu"
+    pointcloud_topic: "/ouster/points"
+    publish_imu: true
+    publish_pointcloud: true
+    transform_timeout: 0.1
+    use_system_default_qos: false
+    ground_frame: "map"

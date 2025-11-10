@@ -1,0 +1,84 @@
+Panels:
+  - Class: rviz_common/DisplaysPanel
+    Name: Displays
+  - Class: rviz_common/SelectionPanel
+    Name: Selection
+  - Class: rviz_common/ToolPropertiesPanel
+    Expanded: true
+    Name: Tool Properties
+  - Class: rviz_common/ViewsPanel
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Name: TF
+    - Class: rviz_default_plugins/PointCloud2
+      Autocompute Intensity Bounds: true
+      Channel Name: intensity
+      Color Transformer: Intensity
+      Decay Time: 0
+      Enabled: true
+      Name: Ouster PointCloud
+      Queue Size: 10
+      Size (Pixels): 3
+      Size (m): 0.1
+      Style: Points
+      Topic: /ouster/points
+      Use Fixed Frame: true
+    - Class: rviz_default_plugins/Image
+      Enabled: true
+      Image Topic: /realsense/color/image_raw
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: RealSense Color
+      Normalize Range: true
+      Queue Size: 2
+      Transport Hint: raw
+    - Class: rviz_default_plugins/Image
+      Enabled: true
+      Image Topic: /realsense/aligned_depth_to_color/image_raw
+      Max Value: 6
+      Median window: 5
+      Min Value: 0
+      Name: RealSense Depth
+      Normalize Range: false
+      Queue Size: 2
+      Transport Hint: raw
+  Enabled: true
+  Global Options:
+    Background Color: 48; 48; 48
+    Default Light: true
+    Fixed Frame: map
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 10
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05
+      Invert Z Axis: false
+      Name: Orbit
+      Near Clip Distance: 0.01
+      Pitch: 0.785
+      Target Frame: map
+      Yaw: 0.0
+    Saved: []
+Window Geometry:
+  Height: 720
+  Width: 1280
+  X: 50
+  Y: 50
