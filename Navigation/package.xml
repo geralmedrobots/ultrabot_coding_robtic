@@ -23,6 +23,11 @@
   <depend>tf2_ros</depend>
   <depend>tf2_geometry_msgs</depend>
   <depend>joy</depend>
+
+  <!-- Sensor drivers (open-source) -->
+  <exec_depend>realsense2_camera</exec_depend>
+  <exec_depend>ouster_ros</exec_depend>
+  <exec_depend>rviz2</exec_depend>
   
   <!-- Dependencies for certified parameter validation (ISO 13849-1 §5.2.2) -->
   <depend>libssl-dev</depend>

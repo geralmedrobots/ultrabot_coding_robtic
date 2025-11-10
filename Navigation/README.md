@@ -16,7 +16,9 @@ ROS2 package for safe AGV control with EtherCAT motor interface, redundant safet
 - ✅ **Command Arbitration:** Priority-based command source selection (ISO 3691-4 compliant)
 - ✅ **Safe Teleoperation:** Deadman button + watchdog timers
 - ✅ **Real-time Diagnostics:** System health monitoring at 1Hz
-- ✅ **Unit Tested:** 21 tests, 95% coverage
+- ✅ **Modular Lifecycle:** Dedicated command limiter, watchdog, and odometry publisher components
+- ✅ **Unit Tested:** 6 automated suites covering lifecycle, watchdog, and maintenance flows
+- ✅ **Perception Ready:** Launch files for Intel RealSense D455 + Ouster OS LiDAR using upstream drivers
 
 ---
 
@@ -143,6 +145,31 @@ ros2 run somanet teleop_joy \
 - **Left Stick:** Forward/backward
 - **Right Stick:** Rotation
 
+### Perception Sensor Launch (RealSense D455 + Ouster OS LiDAR)
+
+Both perception devices leverage upstream open-source drivers:
+
+- [IntelRealSense/realsense-ros](https://github.com/IntelRealSense/realsense-ros) (Apache-2.0)
+- [ros-drivers/ros2_ouster](https://github.com/ros-drivers/ros2_ouster) (BSD-3-Clause)
+
+Configuration files live in [`config/realsense_d455.yaml`](config/realsense_d455.yaml) and
+[`config/ouster_lidar.yaml`](config/ouster_lidar.yaml). Update `serial_no`, `sensor_hostname`, and
+`metadata` to match your hardware before launching.
+
+```bash
+# Launch both sensors with RViz visualization
+ros2 launch somanet sensors.launch.py \
+  realsense_serial:=<optional_serial> \
+  ouster_hostname:=os-1.local \
+  ouster_metadata:=/data/ouster/os-1-metadata.json
+
+# Disable RViz or individual sensors if needed
+ros2 launch somanet sensors.launch.py enable_rviz:=false
+```
+
+`config/sensor_visualization.rviz` provides a ready-to-use RViz layout that overlays the Ouster
+point cloud, RealSense color stream, and aligned depth image for debugging.
+
 ---
 
 ## ✅ Parameter Validation
@@ -194,7 +221,8 @@ Teleop → /cmd_vel → [Safety Supervisor] → /wheel_cmd_safe → [Drive Node]
 | Component | Description | Lines | Status |
 |-----------|-------------|-------|--------|
 | `safety_supervisor_node.cpp` | Redundant command validation | 521 | ✅ Production |
-| `main.cpp` | EtherCAT drive control + odometry | 668 | ✅ Production |
+| `somanet_lifecycle_node.cpp` | Lifecycle orchestration, odometry, watchdogs | 447 | ✅ Production |
+| `main.cpp` | Lifecycle entrypoint & CLI | 93 | ✅ Production |
 | `command_arbitrator_node.cpp` | Priority-based command selection | 380 | ✅ Production |
 | `odometry_calculator.cpp` | Differential drive kinematics | 120 | ✅ Production |
 | `teleop_joy.cpp` | Safe joystick teleoperation | 324 | ✅ Production |
