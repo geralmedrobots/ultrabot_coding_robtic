@@ -41,6 +41,30 @@ the AGV platform, and notes the current integration status.
 | [gazebosim/gz-sim](https://github.com/gazebosim/gz-sim) | Gazebo (Ignition) simulator for robotics. | Enables hardware-in-the-loop testing and virtual validation of hospital layouts. | Simulation environment scheduled for v0.3; start with basic world models. |
 | [ros2/ros_testing](https://github.com/ros2/ros_testing) | Integration testing utilities for ROS 2. | Supports writing launch-based integration tests that exercise the lifecycle node with real middleware. | Incorporate once CI environment can execute `colcon test` end-to-end. |
 
+## Perception & Sensors
+
+| Repository | Description | Value for Ultrabot | Integration Notes |
+|------------|-------------|--------------------|-------------------|
+| [ros-drivers/ros2_ouster](https://github.com/ros-drivers/ros2_ouster) | Drivers and ROS 2 nodes for Ouster LiDAR sensors. | Provides high-resolution point clouds for corridor obstacle detection and SLAM refinement. | Optional for hardware rev that includes a roof-mounted LiDAR; align sensor launch files with Nav2 costmaps. |
+| [ros-drivers/velodyne](https://github.com/ros-drivers/velodyne) | ROS drivers and point cloud utilities for Velodyne LiDARs. | Supplies alternative LiDAR support if procurement shifts vendors. | Evaluate once LiDAR hardware is finalized; the `velodyne_driver` and `velodyne_pointcloud` packages are Humble/Jazzy ready. |
+| [ros-drivers/usb_cam](https://github.com/ros-drivers/usb_cam) | Simple ROS 2 camera driver for USB cameras. | Enables quick prototyping of vision-based patient/asset detection before bespoke perception stacks are added. | Useful for simulation or pilot deployments; migrate to industrial cameras as needed. |
+
+## Human-Machine Interface & Telemetry
+
+| Repository | Description | Value for Ultrabot | Integration Notes |
+|------------|-------------|--------------------|-------------------|
+| [ros-visualization/rqt](https://github.com/ros-visualization/rqt) | Qt-based GUI framework for ROS. | Offers operator dashboards for diagnostics, topic inspection, and teleop panels during trials. | Add curated perspectives for maintenance staff in the commissioning milestone. |
+| [foxglove/studio](https://github.com/foxglove/studio) | Cross-platform visualization and debugging studio for robotics. | Provides modern dashboards, map overlays, and bag playback for hospital validation sessions. | Deploy via desktop app or web build; integrate with bagging workflows to review incidents. |
+| [ros-visualization/webviz](https://github.com/ros-visualization/webviz) | Web-based ROS visualization suite. | Enables lightweight, browser-accessible monitoring stations inside hospitals. | Consider for nurse-station dashboards once security policies permit internal web apps. |
+
+## Quality Assurance & CI
+
+| Repository | Description | Value for Ultrabot | Integration Notes |
+|------------|-------------|--------------------|-------------------|
+| [ros-tooling/action-ros-ci](https://github.com/ros-tooling/action-ros-ci) | GitHub Action for building and testing ROS workspaces. | Automates colcon builds/tests across Humble and Jazzy, closing the current CI gap. | Configure once outbound network restrictions are resolved; pair with hardware-in-the-loop jobs later. |
+| [ament/ament_lint](https://github.com/ament/ament_lint) | Suite of linting tools for ROS packages. | Ensures style and static-analysis compliance (ament_cpplint, uncrustify, xunit). | Already partially in use; extend to cover launch files and Python utilities. |
+| [ros2/launch_testing](https://github.com/ros2/launch_testing) | Python framework for integration tests within ROS launches. | Enables end-to-end verification of lifecycle transitions, topic flow, and watchdog behaviors. | Introduce once the CI environment can spawn DDS middleware reliably. |
+
 ---
 
 ### How to Use This Catalog
