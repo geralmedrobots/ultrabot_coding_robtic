@@ -165,8 +165,9 @@ Ultrabot follows a phased development approach with clear milestones:
 ## 🔗 Open-Source Ecosystem
 
 Ultrabot builds upon a vibrant ROS 2 ecosystem. Explore the curated list of
-upstream repositories that underpin navigation, safety, diagnostics,
-simulation, perception, operator tooling, and CI hardening efforts in
+upstream repositories—now annotated with their maintainers, core value, and
+integration status—that underpin navigation, safety, diagnostics, simulation,
+perception, operator tooling, and CI hardening efforts in
 [docs/OPEN_SOURCE_RESOURCES.md](docs/OPEN_SOURCE_RESOURCES.md).
 
 ---
