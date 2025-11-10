@@ -1,9 +1,16 @@
 # Ultrabot ROS 2 Package Dependencies
 # Ubuntu 22.04 LTS | ROS 2 Humble Hawksbill
+# Ubuntu 24.04 LTS | ROS 2 Jazzy Jalisco
 #
-# Installation:
+# Installation (Jammy/Humble):
 #   sudo apt update
 #   xargs -a requirements/ros2_packages.txt sudo apt install -y
+#
+# Installation (Noble/Jazzy):
+#   export ROS_DISTRO=jazzy
+#   sed "s/ros-humble/ros-${ROS_DISTRO}/g" requirements/ros2_packages.txt \
+#     | grep -v '^#' \
+#     | xargs sudo apt install -y
 #
 # Version-specific installation:
 #   # v0.2 only:  grep -E "^(ros|clang|cppcheck)" requirements/ros2_packages.txt | grep -v "# v0.3" | xargs sudo apt install -y
