@@ -152,6 +152,13 @@ Both perception devices leverage upstream open-source drivers:
 - [IntelRealSense/realsense-ros](https://github.com/IntelRealSense/realsense-ros) (Apache-2.0)
 - [ros-drivers/ros2_ouster](https://github.com/ros-drivers/ros2_ouster) (BSD-3-Clause)
 
+To vendor the full Ouster driver source into your workspace, import the repo manifest and rebuild:
+
+```bash
+vcs import < Navigation/third_party/ros2_ouster.repos
+colcon build --symlink-install --cmake-args -DBUILD_TESTING=OFF
+```
+
 Configuration files live in [`config/realsense_d455.yaml`](config/realsense_d455.yaml) and
 [`config/ouster_lidar.yaml`](config/ouster_lidar.yaml). Update `serial_no`, `sensor_hostname`, and
 `metadata` to match your hardware before launching.
