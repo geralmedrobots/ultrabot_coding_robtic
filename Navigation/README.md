@@ -152,10 +152,17 @@ Both perception devices leverage upstream open-source drivers:
 - [IntelRealSense/realsense-ros](https://github.com/IntelRealSense/realsense-ros) (Apache-2.0)
 - [ros-drivers/ros2_ouster](https://github.com/ros-drivers/ros2_ouster) (BSD-3-Clause)
 
-To vendor the full Ouster driver source into your workspace, import the repo manifest and rebuild:
+To vendor the full Ouster driver source into your workspace, import the repo manifest (which also fetches the point cloud transport plugins) and rebuild:
 
 ```bash
 vcs import < Navigation/third_party/ros2_ouster.repos
+colcon build --symlink-install --cmake-args -DBUILD_TESTING=OFF
+```
+
+To vendor the Intel RealSense ROS 2 driver instead, import the RealSense manifest and rebuild:
+
+```bash
+vcs import < Navigation/third_party/realsense_ros.repos
 colcon build --symlink-install --cmake-args -DBUILD_TESTING=OFF
 ```
 
