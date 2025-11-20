@@ -166,6 +166,13 @@ vcs import < Navigation/third_party/realsense_ros.repos
 colcon build --symlink-install --cmake-args -DBUILD_TESTING=OFF
 ```
 
+If you prefer to import both sensor drivers (Ouster + RealSense) in a single step, use the combined manifest:
+
+```bash
+vcs import < Navigation/third_party/sensors.repos
+colcon build --symlink-install --cmake-args -DBUILD_TESTING=OFF
+```
+
 Configuration files live in [`config/realsense_d455.yaml`](config/realsense_d455.yaml) and
 [`config/ouster_lidar.yaml`](config/ouster_lidar.yaml). Update `serial_no`, `sensor_hostname`, and
 `metadata` to match your hardware before launching.

@@ -28,3 +28,14 @@ colcon build --symlink-install --cmake-args -DBUILD_TESTING=OFF
 ```
 
 The `realsense-ros` repository uses Apache-2.0 licensing and brings its own message definitions and launch files. The upstream README documents any hardware-specific firmware or udev setup that may be required.
+
+## Combined manifest (sensors)
+
+If you want to vendor all perception-related drivers at once, use the combined manifest instead of importing each file separately:
+
+```bash
+vcs import < /path/to/Navigation/third_party/sensors.repos
+colcon build --symlink-install --cmake-args -DBUILD_TESTING=OFF
+```
+
+The combined manifest pulls the Ouster driver, its point cloud transport plugin dependency, and the Intel RealSense ROS 2 driver in one step.
