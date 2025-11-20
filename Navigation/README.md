@@ -152,6 +152,13 @@ Both perception devices leverage upstream open-source drivers:
 - [IntelRealSense/realsense-ros](https://github.com/IntelRealSense/realsense-ros) (Apache-2.0)
 - [ros-drivers/ros2_ouster](https://github.com/ros-drivers/ros2_ouster) (BSD-3-Clause)
 
+To vendor the full Ouster driver source into your workspace, import the repo manifest and rebuild:
+
+```bash
+vcs import < Navigation/third_party/ros2_ouster.repos
+colcon build --symlink-install --cmake-args -DBUILD_TESTING=OFF
+```
+
 Configuration files live in [`config/realsense_d455.yaml`](config/realsense_d455.yaml) and
 [`config/ouster_lidar.yaml`](config/ouster_lidar.yaml). Update `serial_no`, `sensor_hostname`, and
 `metadata` to match your hardware before launching.
@@ -161,7 +168,10 @@ Configuration files live in [`config/realsense_d455.yaml`](config/realsense_d455
 ros2 launch somanet sensors.launch.py \
   realsense_serial:=<optional_serial> \
   ouster_hostname:=os-1.local \
-  ouster_metadata:=/data/ouster/os-1-metadata.json
+  ouster_metadata:=/data/ouster/os-1-metadata.json \
+  ouster_udp_dest:=auto \
+  ouster_lidar_mode:=1024x10 \
+  ouster_timestamp_mode:=TIME_FROM_INTERNAL_OSC
 
 # Disable RViz or individual sensors if needed
 ros2 launch somanet sensors.launch.py enable_rviz:=false
@@ -169,6 +179,14 @@ ros2 launch somanet sensors.launch.py enable_rviz:=false
 
 `config/sensor_visualization.rviz` provides a ready-to-use RViz layout that overlays the Ouster
 point cloud, RealSense color stream, and aligned depth image for debugging.
+
+**Ouster launch argument reference**
+
+- `ouster_hostname`: DNS name or IP of the LiDAR (e.g., `os-1.local`, `10.5.5.120`).
+- `ouster_metadata`: Absolute path to the `os_config.json` exported from the sensor web UI.
+- `ouster_udp_dest`: Destination IP for UDP packets (`auto` binds to the host running the launch file; set to a specific NIC IP when using a dedicated LiDAR interface).
+- `ouster_lidar_mode`: Scan pattern such as `512x20`, `1024x10`, or `2048x10` (must match the hardware capability and metadata file).
+- `ouster_timestamp_mode`: Timestamp source (`TIME_FROM_INTERNAL_OSC`, `TIME_FROM_PTP_1588`, etc.) to align with your time synchronization strategy.
 
 ---
 

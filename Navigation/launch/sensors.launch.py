@@ -23,6 +23,9 @@ def generate_launch_description() -> LaunchDescription:
     realsense_serial = LaunchConfiguration('realsense_serial')
     ouster_hostname = LaunchConfiguration('ouster_hostname')
     ouster_metadata = LaunchConfiguration('ouster_metadata')
+    ouster_udp_dest = LaunchConfiguration('ouster_udp_dest')
+    ouster_lidar_mode = LaunchConfiguration('ouster_lidar_mode')
+    ouster_timestamp_mode = LaunchConfiguration('ouster_timestamp_mode')
 
     realsense_node = Node(
         package='realsense2_camera',
@@ -45,9 +48,12 @@ def generate_launch_description() -> LaunchDescription:
         output='screen',
         parameters=[
             ouster_config,
-            {
+            {  
                 'sensor_hostname': ouster_hostname,
                 'metadata': ouster_metadata,
+                'udp_dest': ouster_udp_dest,
+                'lidar_mode': ouster_lidar_mode,
+                'timestamp_mode': ouster_timestamp_mode,
             },
         ],
         condition=IfCondition(enable_ouster),
@@ -61,9 +67,12 @@ def generate_launch_description() -> LaunchDescription:
         output='screen',
         parameters=[
             ouster_config,
-            {
+            {  
                 'sensor_hostname': ouster_hostname,
                 'metadata': ouster_metadata,
+                'udp_dest': ouster_udp_dest,
+                'lidar_mode': ouster_lidar_mode,
+                'timestamp_mode': ouster_timestamp_mode,
             },
         ],
         condition=IfCondition(enable_ouster),
@@ -108,6 +117,21 @@ def generate_launch_description() -> LaunchDescription:
             'ouster_metadata',
             default_value='/tmp/ouster_metadata.json',
             description='Path to the metadata file exported from the Ouster sensor.',
+        ),
+        DeclareLaunchArgument(
+            'ouster_udp_dest',
+            default_value='auto',
+            description='Destination IP for UDP packets ("auto" uses the machine running this launch file).',
+        ),
+        DeclareLaunchArgument(
+            'ouster_lidar_mode',
+            default_value='1024x10',
+            description='LiDAR scan pattern (e.g., 512x20, 1024x10).',
+        ),
+        DeclareLaunchArgument(
+            'ouster_timestamp_mode',
+            default_value='TIME_FROM_INTERNAL_OSC',
+            description='Timestamp source used by the Ouster sensor.',
         ),
         realsense_node,
         ouster_sensor_node,
