@@ -75,6 +75,17 @@ TEST(CommandWatchdogTest, DetectsTimeouts)
   EXPECT_EQ(std::make_pair(100, 100), watchdog.lastCommand());
 }
 
+TEST(CommandWatchdogTest, DoesNotTimeoutBeforeFirstCommand)
+{
+  auto clock = std::make_shared<rclcpp::Clock>(RCL_STEADY_TIME);
+  CommandWatchdog watchdog(clock);
+  watchdog.setTimeout(0.1);
+
+  std::this_thread::sleep_for(50ms);
+
+  EXPECT_FALSE(watchdog.timedOut());
+}
+
 TEST(CommandWatchdogTest, UpdatesTimestampOnNewCommand)
 {
   auto clock = std::make_shared<rclcpp::Clock>(RCL_STEADY_TIME);
