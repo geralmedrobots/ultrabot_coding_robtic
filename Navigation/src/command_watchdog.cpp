@@ -9,6 +9,10 @@ CommandWatchdog::CommandWatchdog(rclcpp::Clock::SharedPtr clock)
   if (!clock_) {
     throw std::invalid_argument("CommandWatchdog requires a valid clock");
   }
+
+  // Seed the last command time to "now" so freshly created watchdogs don't
+  // immediately report a timeout before the first command arrives.
+  last_command_time_.store(clock_->now().seconds());
 }
 
 void CommandWatchdog::setTimeout(double timeout_seconds)
