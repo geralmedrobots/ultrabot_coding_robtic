@@ -214,6 +214,7 @@ Parameters:
 - `median_kernel_size` / `morph_kernel_size`: smoothing/cleanup kernels for the mask; clamped to odd
   values >= 1 automatically.
 - `max_median_samples`: cap on per-component samples used to estimate median depth, limiting CPU/memory on high-res frames.
+- `valid_fraction_threshold`: minimum ratio of valid depth pixels inside a bbox; drops sparse/edge artifacts.
 - `publish_debug_mask`: toggles the MONO8 mask publication for RViz debugging.
 - `camera_info_topic` / `use_camera_info`: enable 3D projection of detections using intrinsic
   calibration; when disabled, only depth (Z) is reported.
@@ -221,6 +222,8 @@ Parameters:
   2D depth-only results if these remain zero.
 - `pixel_noise_stddev` / `depth_noise_stddev`: simple noise terms (pixels, meters) folded into the
   covariance of projected detections to aid downstream fusion.
+- `temporal_iou_weight` / `max_temporal_gap_ms`: optional weighting for temporal IoU-based scoring of
+  detections to prioritize stable obstacles over transient artifacts.
 
 **Ouster launch argument reference**
 

@@ -16,6 +16,9 @@ object_segmentation_node:
     median_kernel_size: 5
     morph_kernel_size: 3
     max_median_samples: 6000
+    valid_fraction_threshold: 0.3
+    temporal_iou_weight: 0.2
+    max_temporal_gap_ms: 250
     pixel_noise_stddev: 0.4
     depth_noise_stddev: 0.02
     publish_debug_mask: true

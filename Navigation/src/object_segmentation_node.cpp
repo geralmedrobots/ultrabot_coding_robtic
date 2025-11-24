@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <numeric>
 #include <string>
@@ -49,6 +50,9 @@ public:
     max_median_samples_ = this->declare_parameter<int>("max_median_samples", 6000);
     pixel_noise_stddev_ = this->declare_parameter<double>("pixel_noise_stddev", 0.4);
     depth_noise_stddev_ = this->declare_parameter<double>("depth_noise_stddev", 0.02);
+    valid_fraction_threshold_ = this->declare_parameter<double>("valid_fraction_threshold", 0.3);
+    temporal_iou_weight_ = this->declare_parameter<double>("temporal_iou_weight", 0.2);
+    max_temporal_gap_ms_ = this->declare_parameter<int>("max_temporal_gap_ms", 250);
     publish_debug_mask_ = this->declare_parameter<bool>("publish_debug_mask", true);
 
     validateAndClampParameters();
@@ -143,6 +147,10 @@ private:
         continue;
       }
 
+      if (stats_out.valid_fraction < valid_fraction_threshold_) {
+        continue;
+      }
+
       vision_msgs::msg::Detection2D detection;
       detection.header = msg->header;
       detection.bbox.center.position.x = static_cast<double>(x) + width * 0.5;
@@ -155,7 +163,16 @@ private:
       hypothesis.hypothesis.class_id = "obstacle";
       const double area_score = static_cast<double>(area) / (msg->width * msg->height);
       const double proximity_score = 1.0 - std::min(1.0, stats_out.median_depth / max_depth_m_);
-      hypothesis.hypothesis.score = std::clamp(0.25 * area_score + 0.75 * proximity_score, 0.0, 1.0);
+      const double validity_score = std::clamp(
+        (stats_out.valid_fraction - valid_fraction_threshold_) /
+        std::max(1e-3, 1.0 - valid_fraction_threshold_), 0.0, 1.0);
+      const double base_score = std::clamp(0.2 * area_score + 0.5 * proximity_score +
+        0.3 * validity_score, 0.0, 1.0);
+      const double temporal_score = temporalConsistencyScore(
+        depth_mask, x, y, width, height, msg->header.stamp, base_score);
+      hypothesis.hypothesis.score = std::clamp(
+        (1.0 - temporal_iou_weight_) * base_score + temporal_iou_weight_ * temporal_score,
+        0.0, 1.0);
 
       geometry_msgs::msg::Pose & pose = hypothesis.pose.pose;
       if (tryProjectTo3D(detection, stats_out.median_depth, pose)) {
@@ -179,6 +196,9 @@ private:
                         .toImageMsg();
       mask_pub_.publish(mask_msg);
     }
+
+    previous_mask_ = depth_mask;
+    last_mask_stamp_ = msg->header.stamp;
   }
 
   struct DepthStats
@@ -186,6 +206,7 @@ private:
     double median_depth{0.0};
     double mean_depth{0.0};
     double variance{0.0};
+    double valid_fraction{0.0};
     size_t count{0};
   };
 
@@ -241,6 +262,8 @@ private:
     stats_out.mean_depth = mean;
     stats_out.variance = m2 / static_cast<double>(count);
     stats_out.count = count;
+    stats_out.valid_fraction = static_cast<double>(count) /
+      static_cast<double>(std::max(1, width * height));
     return true;
   }
 
@@ -265,6 +288,12 @@ private:
     if (min_area_px_ < 1) {
       RCLCPP_WARN(this->get_logger(), "min_area_px must be >= 1. Resetting to 50 px");
       min_area_px_ = 50;
+    }
+
+    valid_fraction_threshold_ = std::clamp(valid_fraction_threshold_, 0.0, 1.0);
+    temporal_iou_weight_ = std::clamp(temporal_iou_weight_, 0.0, 1.0);
+    if (max_temporal_gap_ms_ < 0) {
+      max_temporal_gap_ms_ = 0;
     }
 
     if (max_median_samples_ < 500) {
@@ -345,6 +374,13 @@ private:
     const double cx = use_camera_info_ && camera_info_ ? camera_info_->k[2] : cx_override_;
     const double cy = use_camera_info_ && camera_info_ ? camera_info_->k[5] : cy_override_;
 
+    if (fx <= 0.0 || fy <= 0.0) {
+      covariance_out.fill(0.0);
+      covariance_out[0] = covariance_out[7] = covariance_out[14] = 1e-3;
+      covariance_out[21] = covariance_out[28] = covariance_out[35] = 1e-2;
+      return;
+    }
+
     const double u = detection.bbox.center.position.x;
     const double v = detection.bbox.center.position.y;
 
@@ -357,13 +393,53 @@ private:
     const double var_x = depth_var * x_jac * x_jac + stats.median_depth * stats.median_depth * pixel_var / (fx * fx);
     const double var_y = depth_var * y_jac * y_jac + stats.median_depth * stats.median_depth * pixel_var / (fy * fy);
 
+    const double yaw_var = pixel_var * (1.0 / (fx * fx) + 1.0 / (fy * fy));
+    const double pitch_var = depth_var / std::max(1.0, stats.count) + yaw_var * 0.5;
+    const double roll_var = pitch_var;
+
     covariance_out = {
       var_x, 0.0, 0.0, 0.0, 0.0, 0.0,
       0.0, var_y, 0.0, 0.0, 0.0, 0.0,
       0.0, 0.0, depth_var, 0.0, 0.0, 0.0,
-      0.0, 0.0, 0.0, 1e-3, 0.0, 0.0,
-      0.0, 0.0, 0.0, 0.0, 1e-3, 0.0,
-      0.0, 0.0, 0.0, 0.0, 0.0, 1e-3};
+      0.0, 0.0, 0.0, roll_var, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, pitch_var, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, yaw_var};
+  }
+
+  double temporalConsistencyScore(
+    const cv::Mat & current_mask, int x, int y, int width, int height,
+    const rclcpp::Time & stamp, double fallback_score)
+  {
+    if (previous_mask_.empty()) {
+      return fallback_score;
+    }
+
+    const auto gap = stamp - last_mask_stamp_;
+    if (gap.nanoseconds() > std::chrono::milliseconds(max_temporal_gap_ms_).count() * 1e6) {
+      return fallback_score;
+    }
+
+    cv::Rect roi(x, y, width, height);
+    roi &= cv::Rect(0, 0, previous_mask_.cols, previous_mask_.rows);
+    if (roi.area() <= 0) {
+      return fallback_score;
+    }
+
+    const cv::Mat prev_roi = previous_mask_(roi);
+    const cv::Mat current_roi = current_mask(roi);
+
+    cv::Mat intersection, uni;
+    cv::bitwise_and(prev_roi, current_roi, intersection);
+    cv::bitwise_or(prev_roi, current_roi, uni);
+
+    const double intersection_area = static_cast<double>(cv::countNonZero(intersection));
+    const double union_area = static_cast<double>(cv::countNonZero(uni));
+    if (union_area <= 0.0) {
+      return fallback_score;
+    }
+
+    const double iou = intersection_area / union_area;
+    return std::clamp(0.5 * fallback_score + 0.5 * iou, 0.0, 1.0);
   }
 
   std::string depth_topic_;
@@ -382,6 +458,9 @@ private:
   int median_kernel_size_;
   int morph_kernel_size_;
   int max_median_samples_;
+  double valid_fraction_threshold_;
+  double temporal_iou_weight_;
+  int max_temporal_gap_ms_;
   double pixel_noise_stddev_;
   double depth_noise_stddev_;
   bool publish_debug_mask_;
@@ -391,6 +470,8 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_sub_;
   sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info_;
   rclcpp::Publisher<vision_msgs::msg::Detection2DArray>::SharedPtr detections_pub_;
+  cv::Mat previous_mask_;
+  rclcpp::Time last_mask_stamp_;
 };
 }  // namespace somanet
 
