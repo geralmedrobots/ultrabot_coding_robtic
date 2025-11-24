@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <numeric>
 #include <string>
@@ -41,9 +42,13 @@ public:
     cy_override_ = this->declare_parameter<double>("cy", 0.0);
     min_depth_m_ = this->declare_parameter<double>("min_depth_m", 0.25);
     max_depth_m_ = this->declare_parameter<double>("max_depth_m", 5.0);
+    depth_saturation_m_ = this->declare_parameter<double>("depth_saturation_m", 10.0);
     min_area_px_ = this->declare_parameter<int>("min_area_px", 80);
     median_kernel_size_ = this->declare_parameter<int>("median_kernel_size", 5);
     morph_kernel_size_ = this->declare_parameter<int>("morph_kernel_size", 3);
+    max_median_samples_ = this->declare_parameter<int>("max_median_samples", 6000);
+    pixel_noise_stddev_ = this->declare_parameter<double>("pixel_noise_stddev", 0.4);
+    depth_noise_stddev_ = this->declare_parameter<double>("depth_noise_stddev", 0.02);
     publish_debug_mask_ = this->declare_parameter<bool>("publish_debug_mask", true);
 
     validateAndClampParameters();
@@ -99,8 +104,9 @@ private:
 
     cv::Mat finite_mask = depth_meters == depth_meters;  // filter NaN
     cv::Mat positive_mask = depth_meters > 0.0f;
+    cv::Mat saturation_mask = depth_meters < depth_saturation_m_;
     cv::Mat interval_mask = (depth_meters >= min_depth_m_) & (depth_meters <= max_depth_m_);
-    cv::Mat depth_mask = finite_mask & positive_mask & interval_mask;
+    cv::Mat depth_mask = finite_mask & positive_mask & interval_mask & saturation_mask;
     depth_mask.convertTo(depth_mask, CV_8UC1, 255.0);
 
     if (median_kernel_size_ > 1) {
@@ -133,7 +139,7 @@ private:
       const int height = stats.at<int>(i, cv::CC_STAT_HEIGHT);
 
       DepthStats stats_out;
-      if (!computeDepthStatistics(depth_meters, labels, i, stats_out)) {
+      if (!computeDepthStatistics(depth_meters, labels, i, x, y, width, height, stats_out)) {
         continue;
       }
 
@@ -153,14 +159,7 @@ private:
 
       geometry_msgs::msg::Pose & pose = hypothesis.pose.pose;
       if (tryProjectTo3D(detection, stats_out.median_depth, pose)) {
-        // covariance: simple depth variance propagated to XYZ, orientation identity
-        hypothesis.pose.covariance = {
-          stats_out.variance, 0.0, 0.0, 0.0, 0.0, 0.0,
-          0.0, stats_out.variance, 0.0, 0.0, 0.0, 0.0,
-          0.0, 0.0, stats_out.variance, 0.0, 0.0, 0.0,
-          0.0, 0.0, 0.0, 1e-3, 0.0, 0.0,
-          0.0, 0.0, 0.0, 0.0, 1e-3, 0.0,
-          0.0, 0.0, 0.0, 0.0, 0.0, 1e-3};
+        fillCovariance(detection, stats_out, hypothesis.pose.covariance);
       } else {
         pose.position.z = stats_out.median_depth;
         pose.orientation.w = 1.0;
@@ -187,42 +186,61 @@ private:
     double median_depth{0.0};
     double mean_depth{0.0};
     double variance{0.0};
+    size_t count{0};
   };
 
   bool computeDepthStatistics(
-    const cv::Mat & depth_meters, const cv::Mat & labels, int component_idx, DepthStats & stats_out)
+    const cv::Mat & depth_meters, const cv::Mat & labels, int component_idx,
+    int x, int y, int width, int height, DepthStats & stats_out)
   {
-    std::vector<float> depth_values;
-    depth_values.reserve(static_cast<size_t>(labels.rows * labels.cols / 8));
+    std::vector<float> median_samples;
+    median_samples.reserve(static_cast<size_t>(std::min(width * height, max_median_samples_)));
 
-    for (int r = 0; r < labels.rows; ++r) {
+    double mean = 0.0;
+    double m2 = 0.0;
+    size_t count = 0;
+
+    const int stride = std::max(1, static_cast<int>(std::ceil(
+      static_cast<double>(width * height) / static_cast<double>(max_median_samples_))));
+    int sample_idx = 0;
+
+    const int r_end = std::min(y + height, depth_meters.rows);
+    const int c_end = std::min(x + width, depth_meters.cols);
+    for (int r = y; r < r_end; ++r) {
       const uint16_t * label_ptr = labels.ptr<uint16_t>(r);
       const float * depth_ptr = depth_meters.ptr<float>(r);
-      for (int c = 0; c < labels.cols; ++c) {
-        if (label_ptr[c] == component_idx) {
-          const float depth = depth_ptr[c];
-          if (std::isfinite(depth) && depth > 0.0f) {
-            depth_values.push_back(depth);
-          }
+      for (int c = x; c < c_end; ++c) {
+        if (label_ptr[c] != component_idx) {
+          continue;
         }
+        const float depth = depth_ptr[c];
+        if (!std::isfinite(depth) || depth <= 0.0f || depth >= depth_saturation_m_) {
+          continue;
+        }
+
+        ++count;
+        const double delta = depth - mean;
+        mean += delta / static_cast<double>(count);
+        const double delta2 = depth - mean;
+        m2 += delta * delta2;
+
+        if (sample_idx % stride == 0) {
+          median_samples.push_back(depth);
+        }
+        ++sample_idx;
       }
     }
 
-    if (depth_values.empty()) {
+    if (count == 0 || median_samples.empty()) {
       return false;
     }
 
-    const size_t mid = depth_values.size() / 2;
-    std::nth_element(depth_values.begin(), depth_values.begin() + mid, depth_values.end());
-    stats_out.median_depth = depth_values[mid];
-    const double sum = std::accumulate(depth_values.begin(), depth_values.end(), 0.0);
-    stats_out.mean_depth = sum / depth_values.size();
-    double accum = 0.0;
-    for (const float v : depth_values) {
-      const double diff = v - stats_out.mean_depth;
-      accum += diff * diff;
-    }
-    stats_out.variance = accum / static_cast<double>(depth_values.size());
+    const size_t mid = median_samples.size() / 2;
+    std::nth_element(median_samples.begin(), median_samples.begin() + mid, median_samples.end());
+    stats_out.median_depth = median_samples[mid];
+    stats_out.mean_depth = mean;
+    stats_out.variance = m2 / static_cast<double>(count);
+    stats_out.count = count;
     return true;
   }
 
@@ -238,9 +256,29 @@ private:
         min_depth_m_ + 0.25);
       max_depth_m_ = min_depth_m_ + 0.25;
     }
+    if (depth_saturation_m_ <= max_depth_m_) {
+      depth_saturation_m_ = max_depth_m_ + 0.1;
+      RCLCPP_WARN(
+        this->get_logger(),
+        "depth_saturation_m must exceed max_depth_m. Raising to %.2f m", depth_saturation_m_);
+    }
     if (min_area_px_ < 1) {
       RCLCPP_WARN(this->get_logger(), "min_area_px must be >= 1. Resetting to 50 px");
       min_area_px_ = 50;
+    }
+
+    if (max_median_samples_ < 500) {
+      RCLCPP_WARN(
+        this->get_logger(),
+        "max_median_samples too small for stable statistics. Bumping to 500");
+      max_median_samples_ = 500;
+    }
+
+    if (pixel_noise_stddev_ < 0.0) {
+      pixel_noise_stddev_ = 0.0;
+    }
+    if (depth_noise_stddev_ < 0.0) {
+      depth_noise_stddev_ = 0.0;
     }
 
     auto normalize_kernel = [](int value, int fallback) {
@@ -298,6 +336,36 @@ private:
     return true;
   }
 
+  void fillCovariance(
+    const vision_msgs::msg::Detection2D & detection, const DepthStats & stats,
+    std::array<double, 36> & covariance_out)
+  {
+    const double fx = use_camera_info_ && camera_info_ ? camera_info_->k[0] : fx_override_;
+    const double fy = use_camera_info_ && camera_info_ ? camera_info_->k[4] : fy_override_;
+    const double cx = use_camera_info_ && camera_info_ ? camera_info_->k[2] : cx_override_;
+    const double cy = use_camera_info_ && camera_info_ ? camera_info_->k[5] : cy_override_;
+
+    const double u = detection.bbox.center.position.x;
+    const double v = detection.bbox.center.position.y;
+
+    const double depth_var = stats.variance + depth_noise_stddev_ * depth_noise_stddev_;
+    const double pixel_var = pixel_noise_stddev_ * pixel_noise_stddev_;
+
+    const double x_jac = (u - cx) / fx;
+    const double y_jac = (v - cy) / fy;
+
+    const double var_x = depth_var * x_jac * x_jac + stats.median_depth * stats.median_depth * pixel_var / (fx * fx);
+    const double var_y = depth_var * y_jac * y_jac + stats.median_depth * stats.median_depth * pixel_var / (fy * fy);
+
+    covariance_out = {
+      var_x, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, var_y, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, depth_var, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 1e-3, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 1e-3, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 1e-3};
+  }
+
   std::string depth_topic_;
   std::string mask_topic_;
   std::string detections_topic_;
@@ -309,9 +377,13 @@ private:
   double cy_override_;
   double min_depth_m_;
   double max_depth_m_;
+  double depth_saturation_m_;
   int min_area_px_;
   int median_kernel_size_;
   int morph_kernel_size_;
+  int max_median_samples_;
+  double pixel_noise_stddev_;
+  double depth_noise_stddev_;
   bool publish_debug_mask_;
 
   image_transport::Subscriber depth_sub_;

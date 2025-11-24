@@ -11,7 +11,11 @@ object_segmentation_node:
     cy: 0.0
     min_depth_m: 0.25
     max_depth_m: 5.0
+    depth_saturation_m: 10.0
     min_area_px: 80
     median_kernel_size: 5
     morph_kernel_size: 3
+    max_median_samples: 6000
+    pixel_noise_stddev: 0.4
+    depth_noise_stddev: 0.02
     publish_debug_mask: true

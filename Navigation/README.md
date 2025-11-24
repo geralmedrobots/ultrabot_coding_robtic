@@ -209,14 +209,18 @@ ros2 launch somanet object_segmentation.launch.py \
 
 Parameters:
 - `min_depth_m` / `max_depth_m`: valid depth interval (meters) to keep obstacles.
+- `depth_saturation_m`: discard saturated/invalid returns above this range.
 - `min_area_px`: minimum connected-component area to report as a detection.
 - `median_kernel_size` / `morph_kernel_size`: smoothing/cleanup kernels for the mask; clamped to odd
   values >= 1 automatically.
+- `max_median_samples`: cap on per-component samples used to estimate median depth, limiting CPU/memory on high-res frames.
 - `publish_debug_mask`: toggles the MONO8 mask publication for RViz debugging.
 - `camera_info_topic` / `use_camera_info`: enable 3D projection of detections using intrinsic
   calibration; when disabled, only depth (Z) is reported.
 - `fx`, `fy`, `cx`, `cy`: optional overrides if `camera_info` is unavailable; detections fall back to
   2D depth-only results if these remain zero.
+- `pixel_noise_stddev` / `depth_noise_stddev`: simple noise terms (pixels, meters) folded into the
+  covariance of projected detections to aid downstream fusion.
 
 **Ouster launch argument reference**
 
