@@ -1,0 +1,11 @@
+object_segmentation_node:
+  ros__parameters:
+    depth_topic: "/realsense/realsense2_camera/depth/image_rect_raw"
+    mask_topic: "/perception/segmentation_mask"
+    detections_topic: "/perception/detections"
+    min_depth_m: 0.25
+    max_depth_m: 5.0
+    min_area_px: 80
+    median_kernel_size: 5
+    morph_kernel_size: 3
+    publish_debug_mask: true
