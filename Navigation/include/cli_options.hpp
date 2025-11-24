@@ -54,6 +54,11 @@ inline CliOptions parse_cli_arguments(int argc, char * argv[], std::vector<char 
   if (!autostart_set) {
     if (const char * env = std::getenv("ULTRABOT_AUTOSTART")) {
       std::string value(env);
+      auto is_space = [](unsigned char c) {
+        return std::isspace(c) != 0;
+      };
+      value.erase(value.begin(), std::find_if_not(value.begin(), value.end(), is_space));
+      value.erase(std::find_if_not(value.rbegin(), value.rend(), is_space).base(), value.end());
       std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
         return static_cast<char>(std::tolower(c));
       });

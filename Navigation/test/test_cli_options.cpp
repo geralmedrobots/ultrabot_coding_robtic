@@ -2,11 +2,42 @@
 
 #include <gtest/gtest.h>
 #include <cstdlib>
+#include <optional>
+#include <string>
 
 namespace
 {
 constexpr char kExecutable[] = "somanet_main";
 }
+
+class EnvGuard
+{
+public:
+  explicit EnvGuard(const std::string & value)
+  {
+    const char * existing = std::getenv("ULTRABOT_AUTOSTART");
+    if (existing) {
+      previous_ = std::string(existing);
+    }
+
+    setenv("ULTRABOT_AUTOSTART", value.c_str(), 1);
+  }
+
+  EnvGuard(const EnvGuard &) = delete;
+  EnvGuard & operator=(const EnvGuard &) = delete;
+
+  ~EnvGuard()
+  {
+    if (previous_) {
+      setenv("ULTRABOT_AUTOSTART", previous_->c_str(), 1);
+    } else {
+      unsetenv("ULTRABOT_AUTOSTART");
+    }
+  }
+
+private:
+  std::optional<std::string> previous_;
+};
 
 TEST(CliOptionsTest, DefaultsWithoutEnv)
 {
@@ -57,13 +88,60 @@ TEST(CliOptionsTest, UsesEnvironmentFallback)
   char * argv[] = {arg0};
   int argc = 1;
 
-  ASSERT_EQ(setenv("ULTRABOT_AUTOSTART", "true", 1), 0);
+  EnvGuard guard{"true"};
 
   std::vector<char *> filtered;
   auto options = somanet::parse_cli_arguments(argc, argv, filtered);
 
   EXPECT_TRUE(options.autostart);
+}
 
-  unsetenv("ULTRABOT_AUTOSTART");
+TEST(CliOptionsTest, UsesEnvironmentFallbackWithWhitespaceAndCase)
+{
+  char arg0[] = kExecutable;
+  char * argv[] = {arg0};
+  int argc = 1;
+
+  EnvGuard guard{"  YeS  "};
+
+  std::vector<char *> filtered;
+  auto options = somanet::parse_cli_arguments(argc, argv, filtered);
+
+  EXPECT_TRUE(options.autostart);
+}
+
+TEST(CliOptionsTest, EnvironmentFallbackDefaultsToFalseOnUnknown)
+{
+  char arg0[] = kExecutable;
+  char * argv[] = {arg0};
+  int argc = 1;
+
+  EnvGuard guard{"maybe"};
+
+  std::vector<char *> filtered;
+  auto options = somanet::parse_cli_arguments(argc, argv, filtered);
+
+  EXPECT_FALSE(options.autostart);
+}
+
+TEST(CliOptionsTest, FiltersThroughUnknownArguments)
+{
+  char arg0[] = kExecutable;
+  char ros_flag[] = "--ros-args";
+  char param[] = "-p";
+  char setting[] = "foo:=bar";
+  char * argv[] = {arg0, ros_flag, param, setting};
+  int argc = 4;
+
+  std::vector<char *> filtered;
+  auto options = somanet::parse_cli_arguments(argc, argv, filtered);
+
+  EXPECT_FALSE(options.autostart);
+  ASSERT_EQ(filtered.size(), 5u);
+  EXPECT_STREQ(filtered[0], kExecutable);
+  EXPECT_STREQ(filtered[1], ros_flag);
+  EXPECT_STREQ(filtered[2], param);
+  EXPECT_STREQ(filtered[3], setting);
+  EXPECT_EQ(filtered[4], nullptr);
 }
 
