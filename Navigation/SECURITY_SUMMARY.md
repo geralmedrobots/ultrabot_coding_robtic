@@ -364,6 +364,12 @@ colcon test-result --verbose
 5. **Secure Boot** for OS-level integrity
 6. **TPM Integration** for sealed secrets
 
+## 🧾 Evidências de Produção a Registrar
+
+- **Keystore de Produção**: hash público do CA, data de emissão, responsáveis pela rotação e localização segura de armazenamento.
+- **Pentest**: resumo de achados (severidade, impacto, SLA de correção) e links para laudos completos em `docs/security/pentest_*.pdf`.
+- **Secure Boot/Criptografia de Disco**: status por unidade (número de série, data de habilitação) e evidências fotográficas/registro de BIOS.
+
 ---
 
 ## 🏆 Conclusion

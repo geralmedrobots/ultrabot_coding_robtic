@@ -13,6 +13,9 @@ endif()
 # Find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(ament_index_cpp REQUIRED)
+find_package(cv_bridge REQUIRED)
+find_package(image_transport REQUIRED)
+find_package(OpenCV REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(rclpy REQUIRED)
@@ -21,6 +24,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(diagnostic_msgs REQUIRED)
+find_package(vision_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
@@ -139,8 +143,21 @@ ament_target_dependencies(teleop_joy
   std_msgs
 )
 
+add_executable(object_segmentation_node src/object_segmentation_node.cpp)
+ament_target_dependencies(object_segmentation_node
+  rclcpp
+  sensor_msgs
+  vision_msgs
+  cv_bridge
+  image_transport
+  OpenCV
+)
+target_link_libraries(object_segmentation_node
+  ${OpenCV_LIBS}
+)
+
 # Build safety_supervisor_node executable
-add_executable(safety_supervisor_node 
+add_executable(safety_supervisor_node
   src/safety_supervisor_node.cpp
   src/certified_params_validator.cpp
   src/maintenance_mode_manager.cpp
@@ -172,6 +189,7 @@ ament_target_dependencies(command_arbitrator_node
 install(TARGETS
   main
   teleop_joy
+  object_segmentation_node
   safety_supervisor_node
   command_arbitrator_node
   DESTINATION lib/${PROJECT_NAME}
