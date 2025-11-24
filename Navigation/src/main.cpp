@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -13,61 +14,15 @@
 #include "ethercat_driver.hpp"
 #include "somanet_lifecycle_node.hpp"
 
-namespace
-{
-struct CliOptions
-{
-  bool autostart{false};
-};
-
-CliOptions parse_cli_arguments(int argc, char * argv[], std::vector<char *> & filtered)
-{
-  CliOptions options;
-  bool autostart_set = false;
-
-  filtered.clear();
-  filtered.reserve(static_cast<size_t>(argc) + 1);
-  filtered.push_back(argv[0]);
-
-  for (int i = 1; i < argc; ++i) {
-    if (std::strcmp(argv[i], "--autostart") == 0) {
-      options.autostart = true;
-      autostart_set = true;
-      continue;
-    }
-
-    if (std::strcmp(argv[i], "--no-autostart") == 0) {
-      options.autostart = false;
-      autostart_set = true;
-      continue;
-    }
-
-    filtered.push_back(argv[i]);
-  }
-
-  filtered.push_back(nullptr);
-
-  if (!autostart_set) {
-    if (const char * env = std::getenv("ULTRABOT_AUTOSTART")) {
-      std::string value(env);
-      std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
-        return static_cast<char>(std::tolower(c));
-      });
-      options.autostart = (value == "1" || value == "true" || value == "yes" || value == "on");
-    }
-  }
-
-  return options;
-}
-}
+#include "cli_options.hpp"
 
 int main(int argc, char * argv[])
 {
   std::vector<char *> filtered_args;
-  CliOptions options;
+  somanet::CliOptions options;
 
   try {
-    options = parse_cli_arguments(argc, argv, filtered_args);
+    options = somanet::parse_cli_arguments(argc, argv, filtered_args);
   } catch (const std::exception & e) {
     std::cerr << "Failed to process command-line arguments: " << e.what() << std::endl;
     return 1;
