@@ -1,13 +1,16 @@
 #include <algorithm>
 #include <cmath>
+#include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/qos.hpp>
+#include <geometry_msgs/msg/pose.hpp>
 #include <sensor_msgs/image_encodings.hpp>
 #include <sensor_msgs/msg/image.hpp>
+#include <sensor_msgs/msg/camera_info.hpp>
 #include <vision_msgs/msg/detection2_d.hpp>
 #include <vision_msgs/msg/detection2_d_array.hpp>
 #include <vision_msgs/msg/object_hypothesis_with_pose.hpp>
@@ -29,6 +32,13 @@ public:
       "mask_topic", "/perception/segmentation_mask");
     detections_topic_ = this->declare_parameter<std::string>(
       "detections_topic", "/perception/detections");
+    camera_info_topic_ = this->declare_parameter<std::string>(
+      "camera_info_topic", "/realsense/realsense2_camera/depth/camera_info");
+    use_camera_info_ = this->declare_parameter<bool>("use_camera_info", true);
+    fx_override_ = this->declare_parameter<double>("fx", 0.0);
+    fy_override_ = this->declare_parameter<double>("fy", 0.0);
+    cx_override_ = this->declare_parameter<double>("cx", 0.0);
+    cy_override_ = this->declare_parameter<double>("cy", 0.0);
     min_depth_m_ = this->declare_parameter<double>("min_depth_m", 0.25);
     max_depth_m_ = this->declare_parameter<double>("max_depth_m", 5.0);
     min_area_px_ = this->declare_parameter<int>("min_area_px", 80);
@@ -36,18 +46,19 @@ public:
     morph_kernel_size_ = this->declare_parameter<int>("morph_kernel_size", 3);
     publish_debug_mask_ = this->declare_parameter<bool>("publish_debug_mask", true);
 
-    if (median_kernel_size_ % 2 == 0) {
-      ++median_kernel_size_;
-    }
-    if (morph_kernel_size_ % 2 == 0) {
-      ++morph_kernel_size_;
-    }
+    validateAndClampParameters();
 
     auto sensor_qos = rclcpp::SensorDataQoS();
     image_transport::ImageTransport it(shared_from_this());
     depth_sub_ = it.subscribe(
       depth_topic_, 1, std::bind(&ObjectSegmentationNode::depthCallback, this, std::placeholders::_1),
       "raw", sensor_qos.get_rmw_qos_profile());
+
+    if (use_camera_info_) {
+      camera_info_sub_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
+        camera_info_topic_, 10,
+        std::bind(&ObjectSegmentationNode::cameraInfoCallback, this, std::placeholders::_1));
+    }
 
     if (publish_debug_mask_) {
       mask_pub_ = image_transport::create_publisher(this, mask_topic_);
@@ -86,7 +97,10 @@ private:
       return;
     }
 
-    cv::Mat depth_mask = (depth_meters >= min_depth_m_) & (depth_meters <= max_depth_m_);
+    cv::Mat finite_mask = depth_meters == depth_meters;  // filter NaN
+    cv::Mat positive_mask = depth_meters > 0.0f;
+    cv::Mat interval_mask = (depth_meters >= min_depth_m_) & (depth_meters <= max_depth_m_);
+    cv::Mat depth_mask = finite_mask & positive_mask & interval_mask;
     depth_mask.convertTo(depth_mask, CV_8UC1, 255.0);
 
     if (median_kernel_size_ > 1) {
@@ -118,8 +132,8 @@ private:
       const int width = stats.at<int>(i, cv::CC_STAT_WIDTH);
       const int height = stats.at<int>(i, cv::CC_STAT_HEIGHT);
 
-      double median_depth = 0.0;
-      if (!computeMedianDepth(depth_meters, labels, i, median_depth)) {
+      DepthStats stats_out;
+      if (!computeDepthStatistics(depth_meters, labels, i, stats_out)) {
         continue;
       }
 
@@ -133,8 +147,24 @@ private:
 
       vision_msgs::msg::ObjectHypothesisWithPose hypothesis;
       hypothesis.hypothesis.class_id = "obstacle";
-      hypothesis.hypothesis.score = std::min(1.0, static_cast<double>(area) / (msg->width * msg->height));
-      hypothesis.pose.pose.position.z = median_depth;
+      const double area_score = static_cast<double>(area) / (msg->width * msg->height);
+      const double proximity_score = 1.0 - std::min(1.0, stats_out.median_depth / max_depth_m_);
+      hypothesis.hypothesis.score = std::clamp(0.25 * area_score + 0.75 * proximity_score, 0.0, 1.0);
+
+      geometry_msgs::msg::Pose & pose = hypothesis.pose.pose;
+      if (tryProjectTo3D(detection, stats_out.median_depth, pose)) {
+        // covariance: simple depth variance propagated to XYZ, orientation identity
+        hypothesis.pose.covariance = {
+          stats_out.variance, 0.0, 0.0, 0.0, 0.0, 0.0,
+          0.0, stats_out.variance, 0.0, 0.0, 0.0, 0.0,
+          0.0, 0.0, stats_out.variance, 0.0, 0.0, 0.0,
+          0.0, 0.0, 0.0, 1e-3, 0.0, 0.0,
+          0.0, 0.0, 0.0, 0.0, 1e-3, 0.0,
+          0.0, 0.0, 0.0, 0.0, 0.0, 1e-3};
+      } else {
+        pose.position.z = stats_out.median_depth;
+        pose.orientation.w = 1.0;
+      }
       hypothesis.pose.pose.orientation.w = 1.0;
       detection.results.emplace_back(std::move(hypothesis));
 
@@ -152,8 +182,15 @@ private:
     }
   }
 
-  bool computeMedianDepth(
-    const cv::Mat & depth_meters, const cv::Mat & labels, int component_idx, double & median_depth)
+  struct DepthStats
+  {
+    double median_depth{0.0};
+    double mean_depth{0.0};
+    double variance{0.0};
+  };
+
+  bool computeDepthStatistics(
+    const cv::Mat & depth_meters, const cv::Mat & labels, int component_idx, DepthStats & stats_out)
   {
     std::vector<float> depth_values;
     depth_values.reserve(static_cast<size_t>(labels.rows * labels.cols / 8));
@@ -177,13 +214,99 @@ private:
 
     const size_t mid = depth_values.size() / 2;
     std::nth_element(depth_values.begin(), depth_values.begin() + mid, depth_values.end());
-    median_depth = depth_values[mid];
+    stats_out.median_depth = depth_values[mid];
+    const double sum = std::accumulate(depth_values.begin(), depth_values.end(), 0.0);
+    stats_out.mean_depth = sum / depth_values.size();
+    double accum = 0.0;
+    for (const float v : depth_values) {
+      const double diff = v - stats_out.mean_depth;
+      accum += diff * diff;
+    }
+    stats_out.variance = accum / static_cast<double>(depth_values.size());
+    return true;
+  }
+
+  void validateAndClampParameters()
+  {
+    if (min_depth_m_ <= 0.0) {
+      RCLCPP_WARN(this->get_logger(), "min_depth_m must be > 0. Resetting to 0.1 m");
+      min_depth_m_ = 0.1;
+    }
+    if (max_depth_m_ <= min_depth_m_) {
+      RCLCPP_WARN(
+        this->get_logger(), "max_depth_m must be > min_depth_m. Adjusting to %.2f m",
+        min_depth_m_ + 0.25);
+      max_depth_m_ = min_depth_m_ + 0.25;
+    }
+    if (min_area_px_ < 1) {
+      RCLCPP_WARN(this->get_logger(), "min_area_px must be >= 1. Resetting to 50 px");
+      min_area_px_ = 50;
+    }
+
+    auto normalize_kernel = [](int value, int fallback) {
+      if (value < 1) {
+        value = fallback;
+      }
+      if (value % 2 == 0) {
+        ++value;
+      }
+      return value;
+    };
+    median_kernel_size_ = normalize_kernel(median_kernel_size_, 5);
+    morph_kernel_size_ = normalize_kernel(morph_kernel_size_, 3);
+  }
+
+  void cameraInfoCallback(const sensor_msgs::msg::CameraInfo::ConstSharedPtr & msg)
+  {
+    camera_info_ = msg;
+  }
+
+  bool tryProjectTo3D(
+    const vision_msgs::msg::Detection2D & detection, double depth_m,
+    geometry_msgs::msg::Pose & pose_out)
+  {
+    const auto camera_info = camera_info_;
+    double fx = fx_override_;
+    double fy = fy_override_;
+    double cx = cx_override_;
+    double cy = cy_override_;
+
+    if (use_camera_info_) {
+      if (!camera_info) {
+        RCLCPP_DEBUG_THROTTLE(
+          this->get_logger(), *this->get_clock(), 5000,
+          "Waiting for camera_info to project detections to 3D");
+        return false;
+      }
+      fx = camera_info->k[0];
+      fy = camera_info->k[4];
+      cx = camera_info->k[2];
+      cy = camera_info->k[5];
+    }
+
+    if (fx <= 0.0 || fy <= 0.0) {
+      return false;
+    }
+
+    const double u = detection.bbox.center.position.x;
+    const double v = detection.bbox.center.position.y;
+
+    pose_out.position.z = depth_m;
+    pose_out.position.x = (u - cx) * depth_m / fx;
+    pose_out.position.y = (v - cy) * depth_m / fy;
+    pose_out.orientation.w = 1.0;
     return true;
   }
 
   std::string depth_topic_;
   std::string mask_topic_;
   std::string detections_topic_;
+  bool use_camera_info_;
+  std::string camera_info_topic_;
+  double fx_override_;
+  double fy_override_;
+  double cx_override_;
+  double cy_override_;
   double min_depth_m_;
   double max_depth_m_;
   int min_area_px_;
@@ -193,6 +316,8 @@ private:
 
   image_transport::Subscriber depth_sub_;
   image_transport::Publisher mask_pub_;
+  rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_sub_;
+  sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info_;
   rclcpp::Publisher<vision_msgs::msg::Detection2DArray>::SharedPtr detections_pub_;
 };
 }  // namespace somanet
