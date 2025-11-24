@@ -321,6 +321,14 @@ if(BUILD_TESTING)
     geometry_msgs
   )
 
+  # Unit tests: CLI option parsing robustness
+  ament_add_gtest(test_cli_options
+    test/test_cli_options.cpp
+  )
+  target_include_directories(test_cli_options PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+  )
+
   # Integration test: Lifecycle Node Bring-up
   add_executable(test_lifecycle_integration
     test/test_lifecycle_integration.cpp
