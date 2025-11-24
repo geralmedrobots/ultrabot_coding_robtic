@@ -194,6 +194,30 @@ ros2 launch somanet sensors.launch.py enable_rviz:=false
 `config/sensor_visualization.rviz` provides a ready-to-use RViz layout that overlays the Ouster
 point cloud, RealSense color stream, and aligned depth image for debugging.
 
+### Depth segmentation + detections
+
+The `object_segmentation_node` converts RealSense (or any depth image) into a binary obstacle mask
+and lightweight `vision_msgs/Detection2DArray` messages for downstream fusion/costmaps. Configure
+defaults in [`config/object_segmentation.yaml`](config/object_segmentation.yaml) and launch with:
+
+```bash
+ros2 launch somanet object_segmentation.launch.py \
+  depth_topic:=/realsense/realsense2_camera/depth/image_rect_raw \
+  mask_topic:=/perception/segmentation_mask \
+  detections_topic:=/perception/detections
+```
+
+Parameters:
+- `min_depth_m` / `max_depth_m`: valid depth interval (meters) to keep obstacles.
+- `min_area_px`: minimum connected-component area to report as a detection.
+- `median_kernel_size` / `morph_kernel_size`: smoothing/cleanup kernels for the mask; clamped to odd
+  values >= 1 automatically.
+- `publish_debug_mask`: toggles the MONO8 mask publication for RViz debugging.
+- `camera_info_topic` / `use_camera_info`: enable 3D projection of detections using intrinsic
+  calibration; when disabled, only depth (Z) is reported.
+- `fx`, `fy`, `cx`, `cy`: optional overrides if `camera_info` is unavailable; detections fall back to
+  2D depth-only results if these remain zero.
+
 **Ouster launch argument reference**
 
 - `ouster_hostname`: DNS name or IP of the LiDAR (e.g., `os-1.local`, `10.5.5.120`).
