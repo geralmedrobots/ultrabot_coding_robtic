@@ -82,6 +82,15 @@ TEST(CliOptionsTest, RejectsConflictingFlags)
   EXPECT_THROW(somanet::parse_cli_arguments(argc, argv, filtered), std::invalid_argument);
 }
 
+TEST(CliOptionsTest, ThrowsOnNullArgvWhenArgcPositive)
+{
+  int argc = 1;
+  char ** argv = nullptr;
+
+  std::vector<char *> filtered;
+  EXPECT_THROW(somanet::parse_cli_arguments(argc, argv, filtered), std::invalid_argument);
+}
+
 TEST(CliOptionsTest, UsesEnvironmentFallback)
 {
   char arg0[] = kExecutable;
@@ -117,6 +126,36 @@ TEST(CliOptionsTest, EnvironmentFallbackDefaultsToFalseOnUnknown)
   int argc = 1;
 
   EnvGuard guard{"maybe"};
+
+  std::vector<char *> filtered;
+  auto options = somanet::parse_cli_arguments(argc, argv, filtered);
+
+  EXPECT_FALSE(options.autostart);
+}
+
+TEST(CliOptionsTest, CommandLineAutostartOverridesEnvironmentFalse)
+{
+  char arg0[] = kExecutable;
+  char flag[] = "--autostart";
+  char * argv[] = {arg0, flag};
+  int argc = 2;
+
+  EnvGuard guard{"0"};
+
+  std::vector<char *> filtered;
+  auto options = somanet::parse_cli_arguments(argc, argv, filtered);
+
+  EXPECT_TRUE(options.autostart);
+}
+
+TEST(CliOptionsTest, CommandLineNoAutostartOverridesEnvironmentTrue)
+{
+  char arg0[] = kExecutable;
+  char flag[] = "--no-autostart";
+  char * argv[] = {arg0, flag};
+  int argc = 2;
+
+  EnvGuard guard{"true"};
 
   std::vector<char *> filtered;
   auto options = somanet::parse_cli_arguments(argc, argv, filtered);

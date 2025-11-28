@@ -21,6 +21,10 @@ inline CliOptions parse_cli_arguments(int argc, char * argv[], std::vector<char 
     throw std::invalid_argument("argc cannot be negative");
   }
 
+  if (argc > 0 && argv == nullptr) {
+    throw std::invalid_argument("argv cannot be null when argc is positive");
+  }
+
   CliOptions options;
   bool autostart_set = false;
 
